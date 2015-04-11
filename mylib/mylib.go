@@ -2,11 +2,20 @@ package mylib
 
 //Default type is 0 (no meaning)
 const NONE int = 0
-const SUPER int = 1
+const CREATE_ROOM int = 1
+const REQUEST_CONN_LIST int = 2
+const CHAT_MESSAGE int = 3
+const ACK = 4
+const NAK = 5
+const JOIN_ROOM int = 6
+const START_GAME int = 7
+const LEAVE_ROOM int = 8
+const DELETE_ROOM int = 9
 
 type Message struct {
-	Content string
-	Source  string
-	Dest    string
-	Type    int
+	Content   string
+	Source    string
+	Dest      string
+	Supernode bool
+	Type      int
 }
