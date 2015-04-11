@@ -2,15 +2,17 @@ package main
 
 import (
 	"Pass_The_Queen/mylib"
+	"bufio"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"net"
+	"os"
+	"strings"
 )
 
 //Todo's:
 //----Global p2p----
-//Get server to return clients addresses rather than names when connecting
-//Get client nodes to connect to each other after talking to the server
 //Add chat GUI and broadcast chat messages to everyone in the network
 //----Local p2p-----
 //Add GUI option to join a specific room (local p2p)
@@ -27,7 +29,9 @@ import (
 var supernodes []string
 var member_count []int
 
-func handleConnection(conn net.Conn) {
+func serverSocketConnection(conn net.Conn) {
+
+	defer conn.Close()
 
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
@@ -42,37 +46,59 @@ func handleConnection(conn net.Conn) {
 			min_index = i
 		}
 	}
+	reply := ""
 	if min_count < len(supernodes) {
-		enc.Encode(&mylib.Message{"false"})
-		enc.Encode(&mylib.Message{supernodes[min_index]})
+		reply = fmt.Sprintf("false %v", supernodes[min_index])
 		member_count[min_index]++
 	} else {
-		enc.Encode(&mylib.Message{"true"})
+		reply = "true"
 		supernodes = append(supernodes, cur_node.Content)
 		member_count = append(member_count, 1)
 		for i := 0; i < len(supernodes); i++ {
-			//fmt.Printf("Sending: %v\n", supernodes[i])
 			if supernodes[i] != cur_node.Content {
-				enc.Encode(&mylib.Message{supernodes[i]})
+				reply = fmt.Sprintf("%v %v", reply, supernodes[i])
 			}
 		}
 	}
-	//todo: make stop part of the last message (different field), rather than its own
-	enc.Encode(&mylib.Message{"STOP"})
+	enc.Encode(&mylib.Message{reply, "server", strings.Split(cur_node.Content, ":")[1], 0})
 }
 
-func main() {
-	fmt.Println("starting server")
-	ln, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		fmt.Println("server failed to listen to port 8080")
-	}
+func serverSocket(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			fmt.Println("server failed to accept connection")
 			continue
 		}
-		go handleConnection(conn)
+		go serverSocketConnection(conn)
+	}
+}
+
+/* Main Server routine. Accepts client connections. */
+func main() {
+	fmt.Println("starting server")
+	ln, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Println("Failed to set up server on port 8080")
+		log.Fatal("", err)
+		return
+	}
+	go serverSocket(ln)
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		in, _ := reader.ReadString('\n')
+		switch {
+		case in == "help\n" || in == "h\n":
+			fmt.Println("Possible commands:")
+			fmt.Println("supernodes")
+		case in == "quit\n" || in == "exit\n" || in == "q\n":
+			return
+		case in == "supernodes\n":
+			for i := 0; i < len(supernodes); i++ {
+				fmt.Println(supernodes[i])
+			}
+
+		}
+
 	}
 }
