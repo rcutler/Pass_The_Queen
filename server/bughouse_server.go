@@ -53,7 +53,7 @@ func serverSocketConnection(conn net.Conn) {
 			} else {
 				reply = "true"
 				supernodes = append(supernodes, msg.Content)
-				member_count = append(member_count, 1)
+				member_count = append(member_count, 0)
 				for i := range supernodes {
 					if supernodes[i] != msg.Content {
 						reply = fmt.Sprintf("%v %v", reply, supernodes[i])

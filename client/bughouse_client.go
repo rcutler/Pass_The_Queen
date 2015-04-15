@@ -45,65 +45,7 @@ func clientSocket(name string, port int) {
 	super_encoders[name].Encode(&mylib.Message{"", my_name, name, is_supernode, 0})
 	defer delete(super_encoders, name)
 
-	var msg mylib.Message
-	var content string
-	for {
-		dec.Decode(&msg)
-		content = msg.Content
-		if msg.Type == mylib.CHAT_MESSAGE {
-			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
-			fmt.Println(content)
-
-		} else if msg.Type == mylib.CREATE_ROOM {
-			decoded := strings.Split(content, ":")
-			rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
-		} else if msg.Type == mylib.JOIN_ROOM {
-			decoded := strings.Split(content, ":")
-			if my_room == decoded[0] {
-				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
-			}
-		} else if msg.Type == mylib.START_GAME {
-			decoded := strings.Split(content, ":")
-			delete(rooms, decoded[0])
-			if my_room == decoded[0] {
-				in_game = true
-				forward_message(content, msg.Source, msg.Type, false)
-				send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, my_port), msg.Type)
-				start_local_chat()
-				return
-			}
-			if msg.Source == decoded[1] {
-				forward_message(content, msg.Source, msg.Type, false)
-				return
-			}
-		} else if msg.Type == mylib.DELETE_ROOM {
-			decoded := strings.Split(content, ":")
-			delete(rooms, decoded[0])
-			if my_room == decoded[0] {
-				my_room = ""
-				in_room = false
-				room_members = make([]string, 0, 0)
-			}
-		} else if msg.Type == mylib.LEAVE_ROOM {
-			content = msg.Content
-			decoded := strings.Split(content, ":")
-			if my_room == decoded[0] {
-				for i := range room_members {
-					if room_members[i] == fmt.Sprintf("%v:%v", decoded[1], decoded[2]) {
-						room_members = append(room_members[:i], room_members[i+1:]...)
-						break
-					}
-				}
-			}
-
-		} else {
-			return
-		}
-		forward_message(content, msg.Source, msg.Type, false)
-		msg.Type = mylib.NONE
-
-	}
-
+	process_messages(dec)
 }
 
 /* Connection to normal node or other supernode */
@@ -112,7 +54,7 @@ func serverSocketConnection(conn net.Conn) {
 	defer conn.Close()
 
 	var msg mylib.Message
-	var content string
+
 	dec := gob.NewDecoder(conn)
 	dec.Decode(&msg)
 	name := msg.Source
@@ -125,61 +67,8 @@ func serverSocketConnection(conn net.Conn) {
 		defer delete(norm_encoders, name)
 	}
 
-	for {
-		dec.Decode(&msg)
-		content = msg.Content
-		if msg.Type == mylib.CHAT_MESSAGE {
-			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
-			fmt.Println(content)
-		} else if msg.Type == mylib.CREATE_ROOM {
-			decoded := strings.Split(content, ":")
-			rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
-		} else if msg.Type == mylib.JOIN_ROOM {
-			decoded := strings.Split(content, ":")
-			if my_room == decoded[0] {
-				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
-			}
-		} else if msg.Type == mylib.START_GAME {
-			decoded := strings.Split(content, ":")
-			delete(rooms, decoded[0])
-			if my_room == decoded[0] {
-				in_game = true
-				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
-				send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, my_port), msg.Type)
-				start_local_chat()
-				return
-			}
-			if msg.Source == decoded[1] {
-				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
-				return
-			}
-		} else if msg.Type == mylib.DELETE_ROOM {
-			decoded := strings.Split(content, ":")
-			delete(rooms, decoded[0])
-			if my_room == decoded[0] {
-				my_room = ""
-				in_room = false
-				room_members = make([]string, 0, 0)
-			}
-		} else if msg.Type == mylib.LEAVE_ROOM {
-			content = msg.Content
-			decoded := strings.Split(content, ":")
-			if my_room == decoded[0] {
-				for i := range room_members {
-					if room_members[i] == fmt.Sprintf("%v:%v", decoded[1], decoded[2]) {
-						room_members = append(room_members[:i], room_members[i+1:]...)
-						break
-					}
-				}
-			}
-		} else {
-			return
-		}
+	process_messages(dec)
 
-		forward_message(content, msg.Source, msg.Type, !msg.Supernode)
-
-		msg.Type = mylib.NONE
-	}
 }
 
 /* Receives incoming connections from normal nodes/other supernodes */
@@ -364,4 +253,66 @@ func start_local_chat() {
 		port, _ := strconv.Atoi(decoded[1])
 		go clientSocket(decoded[0], port)
 	}
+}
+
+func process_messages(dec *gob.Decoder) {
+	var msg mylib.Message
+	var content string
+
+	for {
+		dec.Decode(&msg)
+		content = msg.Content
+		if msg.Type == mylib.CHAT_MESSAGE {
+			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
+			fmt.Println(content)
+		} else if msg.Type == mylib.CREATE_ROOM {
+			decoded := strings.Split(content, ":")
+			rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
+		} else if msg.Type == mylib.JOIN_ROOM {
+			decoded := strings.Split(content, ":")
+			if my_room == decoded[0] {
+				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
+			}
+		} else if msg.Type == mylib.START_GAME {
+			decoded := strings.Split(content, ":")
+			delete(rooms, decoded[0])
+			if my_room == decoded[0] {
+				in_game = true
+				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
+				send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, my_port), msg.Type)
+				start_local_chat()
+				return
+			}
+			if msg.Source == decoded[1] {
+				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
+				return
+			}
+		} else if msg.Type == mylib.DELETE_ROOM {
+			decoded := strings.Split(content, ":")
+			delete(rooms, decoded[0])
+			if my_room == decoded[0] {
+				my_room = ""
+				in_room = false
+				room_members = make([]string, 0, 0)
+			}
+		} else if msg.Type == mylib.LEAVE_ROOM {
+			content = msg.Content
+			decoded := strings.Split(content, ":")
+			if my_room == decoded[0] {
+				for i := range room_members {
+					if room_members[i] == fmt.Sprintf("%v:%v", decoded[1], decoded[2]) {
+						room_members = append(room_members[:i], room_members[i+1:]...)
+						break
+					}
+				}
+			}
+		} else {
+			return
+		}
+
+		forward_message(content, msg.Source, msg.Type, !msg.Supernode)
+
+		msg.Type = mylib.NONE
+	}
+
 }
