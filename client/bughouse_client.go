@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Pass_The_Queen/client_game"
 	"Pass_The_Queen/mylib"
 	"bufio"
 	"encoding/gob"
@@ -195,7 +196,8 @@ func main() {
 				enc.Encode(&mylib.Message{my_room, my_name, "server", is_supernode, mylib.START_GAME})
 				send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, my_port), mylib.START_GAME)
 				delete(rooms, my_room)
-				start_local_chat()
+				// Need at stuff to set up teams and color
+				start_local_chat(my_room, my_name, "temp", 1, 1)
 			}
 			//Leave a room
 		} else if in == "leave" {
@@ -246,13 +248,19 @@ func forward_message(content string, source string, Type int, broadcast bool) {
 	}
 }
 
-func start_local_chat() {
+// Need at stuff to set up teams and color
+func start_local_chat(room string, player string, opponent string, color int, team int) {
 	is_supernode = true
 	for i := range room_members {
 		decoded := strings.Split(room_members[i], ":")
 		port, _ := strconv.Atoi(decoded[1])
 		go clientSocket(decoded[0], port)
 	}
+	// Set up the game state with the initialize function here.
+	// Put in a new file/package called client_game
+	// Need at stuff to set up teams and color
+	client_game.StartGame(room, player, opponent, color, team)
+	//client_game.StartGame("a", "b", "c", 1, 2)
 }
 
 func process_messages(dec *gob.Decoder) {
@@ -280,7 +288,8 @@ func process_messages(dec *gob.Decoder) {
 				in_game = true
 				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
 				send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, my_port), msg.Type)
-				start_local_chat()
+				// Need at stuff to set up teams and color
+				start_local_chat(my_room, my_name, "test", 1, 2)
 				return
 			}
 			if msg.Source == decoded[1] {

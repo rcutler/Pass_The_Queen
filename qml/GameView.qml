@@ -36,6 +36,7 @@
 
 import QtQuick 2.0
 import QtQuick.Window 2.0
+import QtQuick.Controls 1.1
 
 Rectangle {
 	id: gameView
@@ -51,6 +52,36 @@ Rectangle {
 		x: 20
 		y: 20
 	}
+
+	// Add a button for submitting a move.
+	Button {
+		x: 100
+		y: 450
+		width: 110
+		height: 30
+		id: submitMove
+		text: "Submit Move"
+		onClicked: {
+			console.log("Submit Move Button Clicked")
+		}
+	}
+
+	// Add a button for reverting a move.
+	Button {
+		x: 230
+		y: 450
+		width: 110
+		height: 30
+		id: undoMove
+		text: "Undo Move"
+		onClicked: {
+			console.log("Undo Move Button Clicked")
+			//chessBoard.undoMove()
+		}
+	}
+
+	// Add a timer and display thing for it.
+
 
 	// Add the CapturedPieces File
 	/* CapturedPieces {

@@ -11,7 +11,7 @@ Component {
 			width: 50
 			height: 50
 			smooth: true
-			source: chessBoard.square(index).pieceImage
+			source: chessBoard.square(index).image
 			MouseArea {
 				anchors.fill: parent
 				// Put the function part of onClicked into its own file
