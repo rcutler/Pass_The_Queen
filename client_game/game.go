@@ -15,18 +15,18 @@ const WHITE int = 1
 const BLACK int = 2
 const COLOR_WHITE string = "#D18B47"
 const COLOR_BLACK string = "#FFCE9E"
-const BLACKROOK string = "./Pieces/Rook_Black_60.png"
-const BLACKKNIGHT string = "./Pieces/Knight_Black_60.png"
-const BLACKBISHOP string = "./Pieces/Bishop_Black_60.png"
-const BLACKQUEEN string = "./Pieces/Queen_Black_60.png"
-const BLACKKING string = "./Pieces/King_Black_60.png"
-const BLACKPAWN string = "./Pieces/Pawn_Black_60.png"
-const WHITEROOK string = "./Pieces/Rook_White_60.png"
-const WHITEKNIGHT string = "./Pieces/Knight_White_60.png"
-const WHITEBISHOP string = "./Pieces/Bishop_White_60.png"
-const WHITEQUEEN string = "./Pieces/Queen_White_60.png"
-const WHITEKING string = "./Pieces/King_White_60.png"
-const WHITEPAWN string = "./Pieces/Pawn_White_60.png"
+const BLACKROOK string = "../pieces/Rook_Black_60.png"
+const BLACKKNIGHT string = "../pieces/Knight_Black_60.png"
+const BLACKBISHOP string = "../pieces/Bishop_Black_60.png"
+const BLACKQUEEN string = "../pieces/Queen_Black_60.png"
+const BLACKKING string = "../pieces/King_Black_60.png"
+const BLACKPAWN string = "../pieces/Pawn_Black_60.png"
+const WHITEROOK string = "../pieces/Rook_White_60.png"
+const WHITEKNIGHT string = "../pieces/Knight_White_60.png"
+const WHITEBISHOP string = "../pieces/Bishop_White_60.png"
+const WHITEQUEEN string = "../pieces/Queen_White_60.png"
+const WHITEKING string = "../pieces/King_White_60.png"
+const WHITEPAWN string = "../pieces/Pawn_White_60.png"
 
 type Game struct {
 	Name        string
@@ -101,7 +101,7 @@ func run() error {
 	engine.Context().SetVar("chessBoard", chessBoard)
 
 	// Load the qml file
-	component, err := engine.LoadFile("GameView.qml")
+	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/GameView.qml")
 	if err != nil {
 		return err
 	}
