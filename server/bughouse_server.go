@@ -60,7 +60,7 @@ func serverSocketConnection(conn net.Conn) {
 					}
 				}
 			}
-			enc.Encode(&mylib.Message{reply, "server", strings.Split(msg.Content, ":")[1], false, mylib.REQUEST_CONN_LIST})
+			enc.Encode(&mylib.Message{reply, "server", "server", strings.Split(msg.Content, ":")[1], false, mylib.REQUEST_CONN_LIST, nil})
 		} else if msg.Type == mylib.CREATE_ROOM {
 			name_available := true
 			decoded := strings.Split(msg.Content, ":")
@@ -70,10 +70,10 @@ func serverSocketConnection(conn net.Conn) {
 				}
 			}
 			if name_available {
-				enc.Encode(&mylib.Message{"", "server", msg.Source, false, mylib.ACK})
+				enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.ACK, nil})
 				rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
 			} else {
-				enc.Encode(&mylib.Message{"", "server", msg.Source, false, mylib.NAK})
+				enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.NAK, nil})
 			}
 		} else if msg.Type == mylib.START_GAME {
 			delete(rooms, msg.Content)
