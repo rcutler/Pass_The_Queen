@@ -21,6 +21,9 @@ var is_supernode bool
 var in_room bool
 var in_game bool
 var rooms map[string]string
+var game_team int
+var game_color int
+var game_start int
 
 //Global network
 var norm_encoders map[string]*gob.Encoder
@@ -86,6 +89,7 @@ func serverSocket(ln net.Listener) {
 
 func main() {
 
+	game_start = 1
 	my_name = os.Args[1]
 	in_room = false
 	in_game = false
@@ -160,6 +164,9 @@ func main() {
 				fmt.Println("Already in a room")
 			} else {
 				room_name := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
+				fmt.Println("DEBUG: room_name = ", room_name)
+				game_color = 1
+				game_team = 1
 				enc.Encode(&mylib.Message{fmt.Sprintf("%v:%v:%v", room_name, my_name, my_port), my_name, "server", is_supernode, mylib.CREATE_ROOM})
 				dec.Decode(&msg)
 				if msg.Type == mylib.ACK {
@@ -181,6 +188,8 @@ func main() {
 				if rooms[room_name] == "" {
 					fmt.Println("Error: Room with such name does not exist")
 				} else {
+					game_color = 2
+					game_team = 2
 					send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, my_port), mylib.JOIN_ROOM)
 					in_room = true
 					my_room = room_name
@@ -197,9 +206,21 @@ func main() {
 				send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, my_port), mylib.START_GAME)
 				delete(rooms, my_room)
 				// Need at stuff to set up teams and color
-				start_local_chat(my_room, my_name, "temp", 1, 1)
+				fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
+				//start_local_chat(my_room, my_name, 1, game_color, game_team)
+				start_local_chat()
+				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
 			}
 			//Leave a room
+		} else if in == "start_guest" {
+			if !in_room {
+				fmt.Println("Not in a room")
+			} else if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, my_port) {
+				fmt.Println("The room owner, use 'start' instead")
+			} else {
+				in_game = true
+				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+			}
 		} else if in == "leave" {
 			if in_room {
 				//Delete room if room owner
@@ -218,6 +239,39 @@ func main() {
 		} else if in == "members" {
 			for i := range room_members {
 				fmt.Println(room_members[i])
+			}
+		} else if command[0] == "set_team" { // Change the current players team.
+			if !in_room {
+				fmt.Println("Not in a room!")
+				client_game.StartGame("a", "b", 1, 2, 2)
+			} else {
+				if strings.Count(in, " ") == 0 {
+					fmt.Println("Must provide an integer value of either 1 or 2 for set_team")
+				} else {
+					test := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
+					temp, err := strconv.Atoi(test)
+					if err != nil || (temp != 1 && temp != 2) {
+						fmt.Println("Must provide an integer value of either 1 or 2 for set_team")
+					} else {
+						game_team = temp
+					}
+				}
+			}
+		} else if command[0] == "set_color" { // Change the current players color
+			if !in_room {
+				fmt.Println("Not in a room!")
+			} else {
+				if strings.Count(in, " ") == 0 {
+					fmt.Println("Must provide an integer value of either 1 or 2 for set_color")
+				} else {
+					test := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
+					temp, err := strconv.Atoi(test)
+					if err != nil || (temp != 1 && temp != 2) {
+						fmt.Println("Must provide an integer value of either 1 or 2 for set_color")
+					} else {
+						game_color = temp
+					}
+				}
 			}
 		} else {
 			send_message(in, mylib.CHAT_MESSAGE)
@@ -249,7 +303,8 @@ func forward_message(content string, source string, Type int, broadcast bool) {
 }
 
 // Need at stuff to set up teams and color
-func start_local_chat(room string, player string, opponent string, color int, team int) {
+/*
+func start_local_chat(room string, player string, board int, color int, team int) {
 	is_supernode = true
 	for i := range room_members {
 		decoded := strings.Split(room_members[i], ":")
@@ -259,8 +314,16 @@ func start_local_chat(room string, player string, opponent string, color int, te
 	// Set up the game state with the initialize function here.
 	// Put in a new file/package called client_game
 	// Need at stuff to set up teams and color
-	client_game.StartGame(room, player, opponent, color, team)
-	//client_game.StartGame("a", "b", "c", 1, 2)
+	fmt.Println("DEBUG start_local_chat: ", room, " ", player, " ", board, " ", color, " ", team)
+	client_game.StartGame(room, player, board, color, team)
+}*/
+func start_local_chat() {
+	is_supernode = true
+	for i := range room_members {
+		decoded := strings.Split(room_members[i], ":")
+		port, _ := strconv.Atoi(decoded[1])
+		go clientSocket(decoded[0], port)
+	}
 }
 
 func process_messages(dec *gob.Decoder) {
@@ -289,7 +352,17 @@ func process_messages(dec *gob.Decoder) {
 				forward_message(content, msg.Source, msg.Type, !msg.Supernode)
 				send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, my_port), msg.Type)
 				// Need at stuff to set up teams and color
-				start_local_chat(my_room, my_name, "test", 1, 2)
+				/*fmt.Println("DEBUG: When am I here 2?")
+				fmt.Println("DEBUG process_message: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
+				start_local_chat(my_room, my_name, 1, game_color, game_team)*/
+				start_local_chat()
+				fmt.Println("DEBUG: game_color = ", game_color, " game_team = ", game_team, " player = ", my_name, " game_start = ", game_start)
+				if game_start == 1 && game_team == 1 {
+					game_start++
+					fmt.Println("DEBUG: game_start = ", game_start)
+					//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+				}
+				game_start++
 				return
 			}
 			if msg.Source == decoded[1] {
