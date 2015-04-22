@@ -194,30 +194,6 @@ func (m *Messenger) receive_messages(dec *gob.Decoder) {
 	}
 }
 
-// Need at stuff to set up teams and color
-/*
-func start_local_chat(room string, player string, board int, color int, team int) {
-	is_supernode = true
-	for i := range room_members {
-		decoded := strings.Split(room_members[i], ":")
-		port, _ := strconv.Atoi(decoded[1])
-		go clientSocket(decoded[0], port)
-	}
-	// Set up the game state with the initialize function here.
-	// Put in a new file/package called client_game
-	// Need at stuff to set up teams and color
-	fmt.Println("DEBUG start_local_chat: ", room, " ", player, " ", board, " ", color, " ", team)
-	client_game.StartGame(room, player, board, color, team)
-}
-func start_local_chat() {
-	is_supernode = true
-	for i := range room_members {
-		decoded := strings.Split(room_members[i], ":")
-		port, _ := strconv.Atoi(decoded[1])
-		go clientSocket(decoded[0], port)
-	}
-}*/
-
 /* Send a message to the network */
 func (m *Messenger) Send_message(content string, Type int) {
 	m.received = append(m.received, &mylib.Message{content, m.name, m.name, "", m.is_supernode, Type, m.v_clock.CurTime()})

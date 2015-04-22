@@ -103,9 +103,8 @@ func main() {
 				delete(rooms, my_room)
 				// Need at stuff to set up teams and color
 				fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
-				//start_local_chat(my_room, my_name, 1, game_color, game_team)
-				start_local_chat()
-				//				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+				start_local_chat(my_room, my_name, 1, game_color, game_team)
+				//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
 			}
 			//Leave a room
 		} else if in == "start_guest" {
@@ -175,10 +174,30 @@ func main() {
 	}
 }
 
-func start_local_chat() {
-	fmt.Print("STARTING A GAME")
-	//TODO
+// Need at stuff to set up teams and color
+func start_local_chat(room string, player string, board int, color int, team int) {
+	/*is_supernode = true
+	for i := range room_members {
+		decoded := strings.Split(room_members[i], ":")
+		port, _ := strconv.Atoi(decoded[1])
+		go clientSocket(decoded[0], port)
+	}*/
+	// Set up the game state with the initialize function here.
+	// Put in a new file/package called client_game
+	// Need at stuff to set up teams and color
+	fmt.Println("DEBUG start_local_chat: ", room, " ", player, " ", board, " ", color, " ", team)
+	client_game.StartGame(room, player, board, color, team)
 }
+
+/*
+func start_local_chat() {
+	is_supernode = true
+	for i := range room_members {
+		decoded := strings.Split(room_members[i], ":")
+		port, _ := strconv.Atoi(decoded[1])
+		go clientSocket(decoded[0], port)
+	}
+}*/
 
 func process_messages() {
 	var content string
