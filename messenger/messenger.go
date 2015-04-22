@@ -25,6 +25,8 @@ type Messenger struct {
 	received       []*mylib.Message        //All received messages
 }
 
+var Msnger Messenger
+
 /* Messenger default constructor */
 func NewMessenger(name string) Messenger {
 	var m Messenger
@@ -197,9 +199,9 @@ func (m *Messenger) receive_messages(dec *gob.Decoder) {
 /* Send a message to the network */
 func (m *Messenger) Send_message(content string, Type int) {
 	m.received = append(m.received, &mylib.Message{content, m.name, m.name, "", m.is_supernode, Type, m.v_clock.CurTime()})
-	//fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
+	fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
 	for dest, cur_enc := range m.encoders {
-		//fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime()})
+		fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime()})
 		cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime()})
 	}
 	m.v_clock.Update(nil)
@@ -208,7 +210,7 @@ func (m *Messenger) Send_message(content string, Type int) {
 /* Receive a message from the network */
 func (m *Messenger) Receive_message() *mylib.Message {
 	if len(m.deliver_buffer) != 0 {
-		//fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
+		fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
 		msg := m.deliver_buffer[0]
 		m.deliver_buffer = m.deliver_buffer[1:]
 		return msg

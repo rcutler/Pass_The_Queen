@@ -21,7 +21,8 @@ var game_team int
 var game_color int
 var game_start int
 
-var msnger messenger.Messenger
+// Moving tthis into the messenger class so that I can use the existing messenger object from the game.go stuff.
+//var msnger messenger.Messenger
 
 //Local network
 var room_members []string
@@ -34,13 +35,16 @@ func main() {
 	in_game = false
 	rooms = make(map[string]string)
 
-	msnger = messenger.NewMessenger(my_name)
+	messenger.Msnger = messenger.NewMessenger(my_name)
 
 	fmt.Print("reached")
-	msnger.Login()
+	messenger.Msnger.Login()
 	fmt.Print("reached")
 
 	go process_messages()
+
+	// Maybe add something like go client_game.StartGame() or something like that.
+	// Get it its own thread so that way it can send messages....?
 
 	fmt.Printf("\nChat:\n")
 	reader := bufio.NewReader(os.Stdin)
@@ -63,12 +67,12 @@ func main() {
 				fmt.Println("DEBUG: room_name = ", room_name)
 				game_color = 1
 				game_team = 1
-				msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, msnger.Port), mylib.CREATE_ROOM)
-				msg := msnger.Receive_game_server()
+				messenger.Msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
+				msg := messenger.Msnger.Receive_game_server()
 				if msg.Type == mylib.ACK {
 					fmt.Printf("Creating room: %v\n", room_name)
-					rooms[room_name] = fmt.Sprintf("%v:%v", my_name, msnger.Port)
-					msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, msnger.Port), mylib.CREATE_ROOM)
+					rooms[room_name] = fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port)
+					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
 					in_room = true
 					my_room = room_name
 				} else {
@@ -86,7 +90,7 @@ func main() {
 				} else {
 					game_color = 2
 					game_team = 2
-					msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, msnger.Port), mylib.JOIN_ROOM)
+					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.JOIN_ROOM)
 					in_room = true
 					my_room = room_name
 				}
@@ -94,12 +98,12 @@ func main() {
 		} else if in == "start" {
 			if !in_room {
 				fmt.Println("Not in a room")
-			} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, msnger.Port) {
+			} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
 				fmt.Println("Not the room owner")
 			} else {
 				in_game = true
-				msnger.Send_game_server(my_room, mylib.START_GAME)
-				msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.START_GAME)
+				messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
+				messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
 				delete(rooms, my_room)
 				// Need at stuff to set up teams and color
 				//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
@@ -110,7 +114,7 @@ func main() {
 		} else if in == "start_guest" {
 			if !in_room {
 				fmt.Println("Not in a room")
-			} else if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, msnger.Port) {
+			} else if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
 				fmt.Println("The room owner, use 'start' instead")
 			} else {
 				in_game = true
@@ -119,12 +123,12 @@ func main() {
 		} else if in == "leave" {
 			if in_room {
 				//Delete room if room owner
-				if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, msnger.Port) {
-					msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
-					msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.DELETE_ROOM)
+				if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
+					messenger.Msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
+					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.DELETE_ROOM)
 					delete(rooms, my_room)
 				} else {
-					msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.LEAVE_ROOM)
+					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.LEAVE_ROOM)
 				}
 				in_room = false
 				my_room = ""
@@ -138,7 +142,7 @@ func main() {
 		} else if command[0] == "set_team" { // Change the current players team.
 			if !in_room {
 				fmt.Println("Not in a room!")
-				client_game.StartGame("a", "b", 1, 2, 2)
+				//client_game.StartGame("a", "b", 1, 2, 2)
 			} else {
 				if strings.Count(in, " ") == 0 {
 					fmt.Println("Must provide an integer value of either 1 or 2 for set_team")
@@ -168,8 +172,10 @@ func main() {
 					}
 				}
 			}
+		} else if command[0] == "test_move" {
+			messenger.Msnger.Send_message("1:2:2:0:51:3:Queen-../pieces/Queen_Black_60.png", mylib.MOVE)
 		} else {
-			msnger.Send_message(in, mylib.CHAT_MESSAGE)
+			messenger.Msnger.Send_message(in, mylib.CHAT_MESSAGE)
 		}
 	}
 }
@@ -179,7 +185,7 @@ func process_messages() {
 
 	for {
 		//	fmt.Print("Looping")
-		msg := msnger.Receive_message()
+		msg := messenger.Msnger.Receive_message()
 		if msg.Type == mylib.NONE {
 			time.Sleep(1000000000)
 			continue
@@ -202,13 +208,13 @@ func process_messages() {
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
 				in_game = true
-				msnger.Send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, msnger.Port), msg.Type)
+				messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, messenger.Msnger.Port), msg.Type)
 				// Need at stuff to set up teams and color
 				fmt.Println("DEBUG: game_color = ", game_color, " game_team = ", game_team, " player = ", my_name, " game_start = ", game_start)
 				if game_start == 1 && game_team == 1 {
 					game_start++
 					fmt.Println("DEBUG: game_start = ", game_start)
-					client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+					//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
 				}
 				game_start++
 				return
@@ -239,6 +245,7 @@ func process_messages() {
 			fmt.Println("Got a move message")
 			decoded := strings.Split(content, ":")
 			// Should be board_num, player_team, player_color, turn, origLoc, newLoc, capture_pieceString
+			fmt.Println(decoded)
 			board_num, _ := strconv.Atoi(decoded[0])
 			team, _ := strconv.Atoi(decoded[1])
 			color, _ := strconv.Atoi(decoded[2])

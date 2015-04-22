@@ -1,6 +1,8 @@
 package client_game
 
 import (
+	"Pass_The_Queen/messenger"
+	"Pass_The_Queen/mylib"
 	"fmt"
 	"gopkg.in/qml.v1"
 	"os"
@@ -109,7 +111,9 @@ func run() error {
 	engine.Context().SetVar("chessBoard", chessBoard)
 
 	// Load the qml file
-	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/GameView.qml")
+	//component, err := engine.LoadFile("../src/Pass_The_Queen/qml/GameView.qml")
+	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/Application.qml")
+
 	if err != nil {
 		return err
 	}
@@ -117,19 +121,22 @@ func run() error {
 	// Create the new window
 	window := component.CreateWindow(nil)
 	window.Show()
+	/*
+		time.Sleep(5 * time.Second)
+		//fmt.Println("DEBUG: Update from opponent turn before = ", turn)
+		UpdateFromOpponent(1, 2, 2, turn, 1, 16, "")
+		//UpdateFromOpponent(1, 2, 2, 1, 1, 16, "")
+		//fmt.Println("DEBUG: Update from opponent turn after = ", turn)
 
+		time.Sleep(5 * time.Second)
+		UpdateFromOpponent(4, 2, 2, turn, 1, 16, "")
+
+		time.Sleep(5 * time.Second)
+		UpdateFromOpponent(1, 2, 2, turn, 16, 33, "")
+	*/
 	time.Sleep(5 * time.Second)
-	//fmt.Println("DEBUG: Update from opponent turn before = ", turn)
-	UpdateFromOpponent(1, 2, 2, turn, 1, 16, "")
-	//UpdateFromOpponent(1, 2, 2, 1, 1, 16, "")
-	//fmt.Println("DEBUG: Update from opponent turn after = ", turn)
-
-	time.Sleep(5 * time.Second)
-	UpdateFromOpponent(4, 2, 2, turn, 1, 16, "")
-
-	time.Sleep(5 * time.Second)
-	UpdateFromOpponent(1, 2, 2, turn, 16, 33, "")
-
+	fmt.Println("DEBUG: Seeing if i can send a message from the game..")
+	messenger.Msnger.Send_message("TESTING STUFF!!!!", mylib.CHAT_MESSAGE)
 	window.Wait()
 
 	return nil
@@ -140,9 +147,9 @@ func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, ne
 	// Do some error checking here to see if valid piece and what not....
 	if board != game.Board && captured != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
 		// Update your captured pieces to add this new piece.
-		//fmt.Println("DEBUG: I should not be in here for now")
 	} else if board == game.Board && team != game.TeamPlayer {
 		// The turn value should be the same
+		fmt.Println("DEBUG: turn = ", turn, " turnO = ", turnO)
 		if turn != turnO {
 			// Incompatible state. Different amounts of turns
 			fmt.Println("Error with the number of turns.")
@@ -270,6 +277,7 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				turn++
 
 				// Add a send message to opponent about the move...
+				messenger.Msnger.Send_message(temp, mylib.MOVE)
 			} else {
 				// For enemy piece, record the captured piece, move the piece there and end the turn.
 				// Involves sending info over the network and changing the turn value to the other team.

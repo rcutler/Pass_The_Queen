@@ -41,8 +41,10 @@ import QtQuick.Controls 1.1
 Rectangle {
 	id: gameView
 
-	width: Screen.width
-	height: Screen.height
+	//width: Screen.width
+	//height: Screen.height
+	width: 600
+	height: 600
 
 	color: "#222222"
 
@@ -59,10 +61,12 @@ Rectangle {
 		y: 450
 		width: 110
 		height: 30
+		visible: false
 		id: submitMove
 		text: "Submit Move"
 		onClicked: {
-			console.log("Submit Move Button Clicked")
+			undoMove.visible = true
+			submitMove.visible = false
 		}
 	}
 
@@ -75,8 +79,8 @@ Rectangle {
 		id: undoMove
 		text: "Undo Move"
 		onClicked: {
-			console.log("Undo Move Button Clicked")
-			//chessBoard.undoMove()
+			submitMove.visible = true
+			undoMove.visible = false
 		}
 	}
 
