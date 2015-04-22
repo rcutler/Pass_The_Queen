@@ -33,8 +33,8 @@ func serverSocketConnection(conn net.Conn) {
 
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	var msg mylib.Message
 	for {
+		var msg mylib.Message
 		dec.Decode(&msg)
 		if msg.Type == mylib.REQUEST_CONN_LIST {
 			fmt.Printf("Accepted connection from: %v\n", msg.Content)
@@ -83,7 +83,6 @@ func serverSocketConnection(conn net.Conn) {
 		} else {
 			return
 		}
-		msg.Type = mylib.NONE
 	}
 
 }

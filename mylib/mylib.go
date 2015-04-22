@@ -37,15 +37,22 @@ func NewVectorClock(name string) VectorClock {
 	return v
 }
 
-func (v VectorClock) CurTime() map[string]int {
-	return v.current_time
+func (v *VectorClock) CurTime() map[string]int {
+	ret := make(map[string]int)
+	for k, v := range v.current_time {
+		ret[k] = v
+	}
+	return ret
 }
 
-func (v VectorClock) Update(t map[string]int) {
-	for name, time := range t {
-		v.current_time[name] = max(time, v.current_time[name])
+func (v *VectorClock) Update(t map[string]int) {
+	if t == nil {
+		v.current_time[v.name]++
+	} else {
+		for name, time := range t {
+			v.current_time[name] = max(time, v.current_time[name])
+		}
 	}
-	v.current_time[v.name]++
 }
 
 func max(a, b int) int {

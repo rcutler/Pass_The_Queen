@@ -48,7 +48,6 @@ func main() {
 		in, _ := reader.ReadString('\n')
 		in = strings.Split(in, "\n")[0]
 		command := strings.Split(in, " ")
-		fmt.Printf("Read: %q\n", in)
 		//Print rooms
 		if in == "rooms" {
 			for room_name, owner := range rooms {
@@ -191,7 +190,6 @@ func process_messages() {
 			time.Sleep(1000000000)
 			continue
 		}
-		fmt.Println("Received a message")
 		content = msg.Content
 		if msg.Type == mylib.CHAT_MESSAGE {
 			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)

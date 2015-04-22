@@ -13,15 +13,16 @@ import (
 
 /* Messenger object used to communicate with other nodes in the local or global chat */
 type Messenger struct {
-	name         string                  //Name of this node
-	Port         int                     //Port number of this node
-	is_supernode bool                    //Whether this node is a supernode
-	encoders     map[string]*gob.Encoder //List of encoders
-	enc          *gob.Encoder            //Game Server encoder
-	dec          *gob.Decoder            //Game Server decoder
-	rcv_buffer   []*mylib.Message        //Received message buffer
-	v_clock      mylib.VectorClock       //Vector Clock
-	received     []*mylib.Message        //All received messages
+	name           string                  //Name of this node
+	Port           int                     //Port number of this node
+	is_supernode   bool                    //Whether this node is a supernode
+	encoders       map[string]*gob.Encoder //List of encoders
+	enc            *gob.Encoder            //Game Server encoder
+	dec            *gob.Decoder            //Game Server decoder
+	rcv_buffer     []*mylib.Message        //received message buffer (before ordering)
+	deliver_buffer []*mylib.Message        //messages ready to for delivery (after ordering)
+	v_clock        mylib.VectorClock       //Vector Clock
+	received       []*mylib.Message        //All received messages
 }
 
 /* Messenger default constructor */
@@ -31,12 +32,11 @@ func NewMessenger(name string) Messenger {
 	m.is_supernode = false
 	m.encoders = make(map[string]*gob.Encoder)
 	m.v_clock = mylib.NewVectorClock(name)
-	//m.rcv_buffer = make([]*mylib.Message,0)
 	return m
 }
 
 /* Connect Messenger with game server and connect to the global chat */
-func (m Messenger) Login() {
+func (m *Messenger) Login() {
 
 	fmt.Println("starting client")
 	fmt.Println("contacting team4.ece842.com for game server address (todo)")
@@ -44,7 +44,6 @@ func (m Messenger) Login() {
 
 	//Connect to server
 	conn, err := net.Dial("tcp", "localhost:8080")
-	defer conn.Close()
 
 	if err != nil {
 		fmt.Println("Failed to connect to server on Port 8080")
@@ -91,7 +90,7 @@ func (m Messenger) Login() {
 }
 
 /* Receives incoming connections from normal nodes/other supernodes */
-func (m Messenger) serverSocket(ln net.Listener) {
+func (m *Messenger) serverSocket(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -103,7 +102,7 @@ func (m Messenger) serverSocket(ln net.Listener) {
 }
 
 /* Connection to this node's supernode(s) */
-func (m Messenger) clientSocket(name string, port int) {
+func (m *Messenger) clientSocket(name string, port int) {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%v", port))
 	defer conn.Close()
 	if err != nil {
@@ -117,14 +116,13 @@ func (m Messenger) clientSocket(name string, port int) {
 
 	//Introduce this node
 	m.encoders[name].Encode(&mylib.Message{"", m.name, m.name, name, m.is_supernode, mylib.NONE, m.v_clock.CurTime()})
-	m.v_clock.Update(nil)
 	defer delete(m.encoders, name)
 
 	m.receive_messages(dec)
 }
 
 /* Connection to normal node or other supernodes */
-func (m Messenger) serverSocketConnection(conn net.Conn) {
+func (m *Messenger) serverSocketConnection(conn net.Conn) {
 
 	defer conn.Close()
 
@@ -141,25 +139,24 @@ func (m Messenger) serverSocketConnection(conn net.Conn) {
 }
 
 /* Receives and handles incoming messages */
-func (m Messenger) receive_messages(dec *gob.Decoder) {
-	var msg mylib.Message
-	var content string
+func (m *Messenger) receive_messages(dec *gob.Decoder) {
 
 	for {
+
+		var msg mylib.Message
+
 		//Receive message
 		dec.Decode(&msg)
-		content = msg.Content
+		content := msg.Content
 
 		if msg.Type != mylib.NONE {
-			fmt.Printf("Received: %q from %q (orig) and %q (imm) to %q (super?: %q) of type %q at time %q\n",
-				msg.Content, msg.Orig_source, msg.Source, msg.Dest, m.is_supernode, msg.Type, msg.Timestamp)
 
 			//Compare Timestamps to see whether the message was already received
 			already_received := false
 			for t := range m.received {
 				all_equal := true
-				for name, time := range m.received[t].Timestamp {
-					if time != msg.Timestamp[name] {
+				for name, time := range msg.Timestamp {
+					if time != m.received[t].Timestamp[name] {
 						all_equal = false
 						break
 					}
@@ -182,14 +179,18 @@ func (m Messenger) receive_messages(dec *gob.Decoder) {
 				//TODO: provide functions to connect to other members on starting a game
 
 				//Forward message to other nodes if it did not originate at this node
+				content = fmt.Sprintf("%v says: %v", msg.Source, content)
 				if msg.Orig_source != m.name {
 					for dest, cur_enc := range m.encoders {
+						//fmt.Printf("Forwarded: %q\n", mylib.Message{content, msg.Orig_source, m.name, dest, m.is_supernode, msg.Type, msg.Timestamp})
 						cur_enc.Encode(&mylib.Message{content, msg.Orig_source, m.name, dest, m.is_supernode, msg.Type, msg.Timestamp})
 					}
 				}
+
+				//Deliver any ready messages to the client
+				m.deliver_ordered_messages()
 			}
 		}
-		msg.Type = mylib.NONE
 	}
 }
 
@@ -217,33 +218,65 @@ func start_local_chat() {
 	}
 }*/
 
-// Send message to all connected nodes
-func (m Messenger) Send_message(content string, Type int) {
-	fmt.Printf("Inside send_message\n")
+/* Send a message to the network */
+func (m *Messenger) Send_message(content string, Type int) {
+	m.received = append(m.received, &mylib.Message{content, m.name, m.name, "", m.is_supernode, Type, m.v_clock.CurTime()})
+	//fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
 	for dest, cur_enc := range m.encoders {
-		fmt.Printf("Sending: %q from %q and %q to %q (super?: %q) of type %q at time %q\n", content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime())
+		//fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime()})
 		cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.is_supernode, Type, m.v_clock.CurTime()})
 	}
 	m.v_clock.Update(nil)
 }
 
-// Send message to game server
-func (m Messenger) Send_game_server(content string, Type int) {
-	m.enc.Encode(&mylib.Message{content, m.name, m.name, "server", m.is_supernode, Type, m.v_clock.CurTime()})
-	m.v_clock.Update(nil)
+/* Receive a message from the network */
+func (m *Messenger) Receive_message() *mylib.Message {
+	if len(m.deliver_buffer) != 0 {
+		//fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
+		msg := m.deliver_buffer[0]
+		m.deliver_buffer = m.deliver_buffer[1:]
+		return msg
+	}
+	return &mylib.Message{}
 }
 
-func (m Messenger) Receive_game_server() *mylib.Message {
+/* Send a message to the game server */
+func (m *Messenger) Send_game_server(content string, Type int) {
+	m.enc.Encode(&mylib.Message{content, m.name, m.name, "server", m.is_supernode, Type, m.v_clock.CurTime()})
+}
+
+/* Receive a message from the game server */
+func (m *Messenger) Receive_game_server() *mylib.Message {
 	var msg mylib.Message
 	m.dec.Decode(&msg)
 	return &msg
 }
 
-func (m Messenger) Receive_message() *mylib.Message {
-	if len(m.rcv_buffer) != 0 {
-		msg := m.rcv_buffer[0]
-		m.rcv_buffer = m.rcv_buffer[1:]
-		return msg
+/* Check ordering rules and release any eligible messages for reception by client */
+func (m *Messenger) deliver_ordered_messages() {
+	for i := range m.rcv_buffer {
+		cur_msg := m.rcv_buffer[i]
+		ready_to_deliver := true
+
+		for source, time := range cur_msg.Timestamp {
+			if source == cur_msg.Orig_source {
+				// Check Vj[j] == Vi[j] + 1
+				if time != (m.v_clock.CurTime()[source]+1) && m.v_clock.CurTime()[source] != 0 {
+					ready_to_deliver = false
+					break
+				}
+			} else {
+				// Check Vj[k] <= Vi[k] (k != j)
+				if time > m.v_clock.CurTime()[source] && m.v_clock.CurTime()[source] != 0 {
+					ready_to_deliver = false
+				}
+			}
+		}
+
+		if ready_to_deliver {
+			m.v_clock.Update(cur_msg.Timestamp)
+			m.deliver_buffer = append(m.deliver_buffer, cur_msg)
+			m.rcv_buffer = append(m.rcv_buffer[:i], m.rcv_buffer[i+1:]...)
+		}
 	}
-	return &mylib.Message{}
 }
