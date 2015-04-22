@@ -13,6 +13,7 @@ const LEAVE_ROOM int = 8
 const DELETE_ROOM int = 9
 const SET_TEAM int = 10
 const SET_COLOR int = 11
+const MOVE int = 12
 
 type Message struct {
 	Content     string

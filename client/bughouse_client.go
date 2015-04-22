@@ -102,9 +102,9 @@ func main() {
 				msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.START_GAME)
 				delete(rooms, my_room)
 				// Need at stuff to set up teams and color
-				fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
-				start_local_chat(my_room, my_name, 1, game_color, game_team)
-				//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+				//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
+				//start_local_chat(my_room, my_name, 1, game_color, game_team)
+				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
 			}
 			//Leave a room
 		} else if in == "start_guest" {
@@ -174,31 +174,6 @@ func main() {
 	}
 }
 
-// Need at stuff to set up teams and color
-func start_local_chat(room string, player string, board int, color int, team int) {
-	/*is_supernode = true
-	for i := range room_members {
-		decoded := strings.Split(room_members[i], ":")
-		port, _ := strconv.Atoi(decoded[1])
-		go clientSocket(decoded[0], port)
-	}*/
-	// Set up the game state with the initialize function here.
-	// Put in a new file/package called client_game
-	// Need at stuff to set up teams and color
-	fmt.Println("DEBUG start_local_chat: ", room, " ", player, " ", board, " ", color, " ", team)
-	client_game.StartGame(room, player, board, color, team)
-}
-
-/*
-func start_local_chat() {
-	is_supernode = true
-	for i := range room_members {
-		decoded := strings.Split(room_members[i], ":")
-		port, _ := strconv.Atoi(decoded[1])
-		go clientSocket(decoded[0], port)
-	}
-}*/
-
 func process_messages() {
 	var content string
 
@@ -221,22 +196,19 @@ func process_messages() {
 			if my_room == decoded[0] {
 				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
 			}
-		} else if msg.Type == mylib.START_GAME {
+		} else if msg.Type == mylib.START_GAME { // Shouldn't be called any more...
+			// Or if received and not the game host, do the start_guest functionality.
 			decoded := strings.Split(content, ":")
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
 				in_game = true
 				msnger.Send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, msnger.Port), msg.Type)
 				// Need at stuff to set up teams and color
-				/*fmt.Println("DEBUG: When am I here 2?")
-				fmt.Println("DEBUG process_message: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
-				start_local_chat(my_room, my_name, 1, game_color, game_team)*/
-				start_local_chat()
 				fmt.Println("DEBUG: game_color = ", game_color, " game_team = ", game_team, " player = ", my_name, " game_start = ", game_start)
 				if game_start == 1 && game_team == 1 {
 					game_start++
 					fmt.Println("DEBUG: game_start = ", game_start)
-					//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+					client_game.StartGame(my_room, my_name, 1, game_color, game_team)
 				}
 				game_start++
 				return
@@ -263,6 +235,18 @@ func process_messages() {
 					}
 				}
 			}
+		} else if msg.Type == mylib.MOVE {
+			fmt.Println("Got a move message")
+			decoded := strings.Split(content, ":")
+			// Should be board_num, player_team, player_color, turn, origLoc, newLoc, capture_pieceString
+			board_num, _ := strconv.Atoi(decoded[0])
+			team, _ := strconv.Atoi(decoded[1])
+			color, _ := strconv.Atoi(decoded[2])
+			turn, _ := strconv.Atoi(decoded[3])
+			origLoc, _ := strconv.Atoi(decoded[4])
+			newLoc, _ := strconv.Atoi(decoded[5])
+			captured := decoded[6]
+			client_game.UpdateFromOpponent(board_num, team, color, turn, origLoc, newLoc, captured)
 		}
 
 		msg.Type = mylib.NONE
