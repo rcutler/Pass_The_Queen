@@ -38,6 +38,7 @@ Item {
         anchors.fill: parent
 
         function sendMessage(){
+
             var hasFocus = input.focus;
             input.focus = false;
 
@@ -45,6 +46,10 @@ Item {
             input.clear()
             chatContent.append({content: "Me: " + data})
             
+            //send message out
+            chatting.sendChatMsg(data)
+            
+
             chatView.positionViewAtEnd()
 
             input.focus = hasFocus; 
@@ -53,27 +58,11 @@ Item {
             anchors.fill: parent
             anchors.margins: 10
 
-            InputBox {
-                id: input
-                Keys.onReturnPressed: chatBox.sendMessage()
-                height: sendButton.height
-                width: parent.width - sendButton.width - 15
-                anchors.left: parent.left
-            }
-
-            Button {
-                id: sendButton
-                anchors.right: parent.right
-                text: "Send"
-                onClicked: chatBox.sendMessage()
-            }
-
-
             Rectangle {
                 height: parent.height - input.height - 15
                 width: parent.width;
                 color: "#d7d6d5"
-                anchors.bottom: parent.bottom
+                anchors.top: parent.top
                 border.color: "black"
                 border.width: 1
                 radius: 5
@@ -93,6 +82,25 @@ Item {
                     }
                 }
             }
+
+            InputBox {
+                id: input
+                Keys.onReturnPressed: chatBox.sendMessage()
+                height: sendButton.height
+                width: parent.width - sendButton.width - 15
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+            }
+
+            Button {
+                id: sendButton
+                anchors.right: parent.right
+                height: parent.height*0.15
+                text: "Send"
+                onClicked: chatBox.sendMessage()
+                anchors.bottom: parent.bottom
+            }
+
         }
     }
 

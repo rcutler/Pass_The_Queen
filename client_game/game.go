@@ -70,6 +70,14 @@ var capturedPieces CapturedPieces
 var turn int
 var chessBoard *ChessBoard
 
+//chatting message
+type ChatMsg struct{ 
+	Msg string
+	//ChatTextChanged bool
+}
+var chatting ChatMsg
+
+
 func StartGame(room string, player string, board int, color int, team int) {
 	fmt.Println("I am in the start game function.... good news.")
 	game.Name = room
@@ -108,6 +116,9 @@ func run() error {
 	engine.Context().SetVar("game", game)
 	engine.Context().SetVar("chessBoard", chessBoard)
 
+	//chat room variable
+	engine.Context().SetVar("chatting",chatting)
+
 	// Load the qml file
 	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/GameView.qml")
 	if err != nil {
@@ -132,8 +143,16 @@ func run() error {
 
 	window.Wait()
 
-	return nil
+	return nil	
 }
+
+func (chat ChatMsg)SendChatMsg(data string){
+		fmt.Println("******************************************");
+		fmt.Println(data)
+		fmt.Println("******************************************");
+
+}
+
 
 // temp := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, origLoc, newLoc, "")
 func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, captured string) {
