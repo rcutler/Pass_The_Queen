@@ -6,6 +6,8 @@ Rectangle {
 	width: applicationView.width
 	height: applicationView.height
 
+	property int host: 0
+
 	// Button For joining a room
 	Button {
 		x: 200
@@ -47,7 +49,8 @@ Rectangle {
 			leaveRoom.visible = false
 			listRooms.y = 300
 			// Create a function for like starting a timer when the game starts if it is your turn or something. And then have another thing to call 
-			game.startRoom()
+			game.startRoom(host)
+			host = 0
 			timerGame.start()
 		}
 	}
@@ -68,6 +71,7 @@ Rectangle {
 			joinRoom.visible = false
 			createRoom.visible = false
 			listRooms.y = 400
+			host = 1
 			game.createRoom("a") // Replace the string value with value from a text field
 		}
 	}

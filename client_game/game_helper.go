@@ -18,6 +18,7 @@ func (g *Game) ChangeTeam() {
 	} else {
 		game_team = 1
 	}
+	fmt.Println(game_team)
 
 }
 
@@ -27,6 +28,7 @@ func (g *Game) ChangeColor() {
 	} else {
 		game_color = 1
 	}
+	fmt.Println(game_color)
 }
 
 func (g *Game) ListGames() string {
@@ -108,16 +110,17 @@ func (g *Game) CreateRoom(room_name string) {
 	}
 }
 
-func (g *Game) StartRoom() {
+func (g *Game) StartRoom(host int) {
 	if !in_room {
 		fmt.Println("Not in a room")
-	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-		fmt.Println("Not the room owner")
 	} else {
+		if host == 1 {
+			messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
+			delete(rooms, my_room)
+			fmt.Println("SHould only be here on A")
+		}
 		in_game = true
-		messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
-		messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
-		delete(rooms, my_room)
 		// Need at stuff to set up teams and color
 		//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
 		//start_local_chat(my_room, my_name, 1, game_color, game_team)
@@ -126,7 +129,7 @@ func (g *Game) StartRoom() {
 }
 
 func (c *ChessBoard) Timer() {
-	if game.TeamPlayer == turn%2+1 {
+	if game.TeamPlayer == (turn%2)+1 {
 		c.Time = c.Time - 1
 		qml.Changed(c, &c.Time)
 	}
@@ -134,20 +137,28 @@ func (c *ChessBoard) Timer() {
 
 func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, captured string) {
 	// Do some error checking here to see if valid piece and what not....
+	fmt.Println(board, " ", game.Board)
+	fmt.Println(captured)
+	fmt.Println(team, " ", game.TeamPlayer)
 	if board != game.Board && captured != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
 		// Update your captured pieces to add this new piece.
+		fmt.Println("1")
 	} else if board == game.Board && team != game.TeamPlayer {
 		// The turn value should be the same
+		fmt.Println("2")
 		if turn != turnO {
 			// Incompatible state. Different amounts of turns
 			fmt.Println("Error with the number of turns.")
+			fmt.Println("3")
 		} else {
 			chessBoard.Update(origL, newL)
+			fmt.Println("4")
 			turn++
 		}
 	} else { //if board != game.Board && team == game.TeamPlayer {
 		// Can ignore, is a move not from your board
 		// Can ignore if it
+		fmt.Println("5")
 		//fmt.Println("DEBUG: An update from opponent or team mate that is not on this board has happend. Handled correctly!.")
 		return
 	}

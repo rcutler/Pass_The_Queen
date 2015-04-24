@@ -86,6 +86,9 @@ func StartGame(room string, player string, board int, color int, team int) { //,
 	game.PlayerColor = color
 	game.TeamPlayer = team
 
+	fmt.Println("IN StartGame: ", game.Board)
+	fmt.Println("IN StartGame: ", game.TeamPlayer)
+
 	turn = 0
 
 	/*	temp := &ChessBoard{}
