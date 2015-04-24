@@ -89,9 +89,9 @@ func Run() error {
 
 func (chat ChatMsg)SendChatMsg(data string){
 		fmt.Println("******************************************");
-		fmt.Println(data)
+		fmt.Println("sending: "+data)
 		fmt.Println("******************************************");
-
+		messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
 
 

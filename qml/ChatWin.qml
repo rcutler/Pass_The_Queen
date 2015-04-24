@@ -12,7 +12,7 @@ Item {
     ListModel {
         id: chatContent
         ListElement {
-            content: "Connected to chat server"
+            content: "Connected."
         }
     }
 
