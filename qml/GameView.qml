@@ -67,6 +67,7 @@ Rectangle {
 		onClicked: {
 			undoMove.visible = true
 			submitMove.visible = false
+
 		}
 	}
 

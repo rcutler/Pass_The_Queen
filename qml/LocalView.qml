@@ -17,6 +17,11 @@ Rectangle {
 		y: 20
 	}
 
+	ChatWin {
+		id: chat
+		x: 1000
+		y: 20
+	}
 /*	CapturedPieces {
 		id: cp
 		x: 650

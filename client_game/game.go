@@ -11,6 +11,13 @@ import (
 	"strings"
 	"time"
 )
+//chatting message
+type ChatMsg struct{ 
+	Msg string
+	//ChatTextChanged bool
+}
+var chatting ChatMsg
+
 
 var game *Game
 var capturedPieces CapturedPieces
@@ -49,6 +56,8 @@ func Run() error {
 
 	engine.Context().SetVar("game", game)
 	engine.Context().SetVar("chessBoard", chessBoard)
+	//chat room variable
+	engine.Context().SetVar("chatting",chatting)
 
 	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/Application.qml")
 
@@ -77,6 +86,15 @@ func Run() error {
 
 	return nil
 }
+
+func (chat ChatMsg)SendChatMsg(data string){
+		fmt.Println("******************************************");
+		fmt.Println(data)
+		fmt.Println("******************************************");
+
+}
+
+
 
 func StartGame(room string, player string, board int, color int, team int) { //, engine1 *qml.Engine) {
 	fmt.Println("I am in the start game function.... good news.")
