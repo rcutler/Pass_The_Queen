@@ -53,6 +53,11 @@ Rectangle {
 		y: 20
 	}
 
+	ChatWin{
+		id:chat
+		x:800
+		y:20
+	}
 	// Add a button for submitting a move.
 	Button {
 		x: 100
