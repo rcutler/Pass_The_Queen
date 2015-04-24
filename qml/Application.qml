@@ -27,4 +27,19 @@ Rectangle {
 		visible: false
 	}
 
+	// Try creating a timer here and having its text value read in the local view
+	Item {
+		id: timerItem
+		Timer {
+			id: timerGame
+			interval: 1000
+			running: false
+			repeat: true
+			onTriggered: {
+				// Have this call a function in the go code that will decrement a count value and then do a qml.changed on it to have it updated. That way, can check to see if it is the players turn, if it is, decement. Otherwise just return. Then can have check in GO to see if game ended. And can resolve it that way.
+				chessBoard.timer()
+			}
+		}
+	}
+
 }

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var game Game
+var game *Game
 var capturedPieces CapturedPieces
 var turn int
 var chessBoard *ChessBoard
@@ -34,6 +34,21 @@ func Run() error {
 	//tmp := &qml.Engine{}
 	//engine = tmp
 	engine := qml.NewEngine()
+
+	temp := &ChessBoard{}
+
+	chessBoard = temp
+
+	temp2 := CapturedPieces{}
+	capturedPieces = temp2
+
+	temp3 := &Game{}
+	game = temp3
+
+	chessBoard.initialize()
+
+	engine.Context().SetVar("game", game)
+	engine.Context().SetVar("chessBoard", chessBoard)
 
 	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/Application.qml")
 
@@ -63,7 +78,7 @@ func Run() error {
 	return nil
 }
 
-func StartGame(room string, player string, board int, color int, team int, engine1 *qml.Engine) {
+func StartGame(room string, player string, board int, color int, team int) { //, engine1 *qml.Engine) {
 	fmt.Println("I am in the start game function.... good news.")
 	game.Name = room
 	game.PlayerID = player
@@ -73,12 +88,22 @@ func StartGame(room string, player string, board int, color int, team int, engin
 
 	turn = 0
 
-	temp := &ChessBoard{}
+	/*	temp := &ChessBoard{}
 
-	chessBoard = temp
+		chessBoard = temp
+
+		temp2 := CapturedPieces{}
+		capturedPieces = temp2*/
 
 	//capturedPieces := &CapturedPieces{}
-	chessBoard.initialize()
+	//	chessBoard.initialize()
+
+	t3 := new(CapturedPiece)
+	t3.Image = BLACKROOK
+	t3.TeamPiece = 1
+	t3.Type = "ROOK"
+
+	capturedPieces.Add(*t3)
 
 	// Check that everything in the chessboard is initialized properly.
 	for i := 0; i < 64; i++ {
@@ -86,12 +111,13 @@ func StartGame(room string, player string, board int, color int, team int, engin
 		fmt.Println("Index: ", s.Index, "  Color: ", s.Color, " Piece Type: ", s.Type, " Piece image loc: ", s.Image, " Piece color: ", s.TeamPiece)
 	}
 
-	fmt.Println("DEBUG: HERE???? 1")
+	//fmt.Println("DEBUG: HERE???? 1")
 
-	engine1.Context().SetVar("game", game)
-	engine1.Context().SetVar("chessBoard", chessBoard)
+	//engine1.Context().SetVar("game", game)
+	//engine1.Context().SetVar("chessBoard", chessBoard)
+	//engine1.Context().SetVar("capturedPieces", capturedPieces)
 
-	fmt.Println("DEBUG: HERE???? 2")
+	//fmt.Println("DEBUG: HERE???? 2")
 }
 
 // Create a function for ending the game...
@@ -159,7 +185,7 @@ func start_network(engine1 *qml.Engine) {
 				// Need at stuff to set up teams and color
 				//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
 				//start_local_chat(my_room, my_name, 1, game_color, game_team)
-				StartGame(my_room, my_name, 1, game_color, game_team, engine1)
+				StartGame(my_room, my_name, 1, game_color, game_team)
 			}
 			//Leave a room
 		} else if in == "start_guest" {
@@ -169,7 +195,7 @@ func start_network(engine1 *qml.Engine) {
 				fmt.Println("The room owner, use 'start' instead")
 			} else {
 				in_game = true
-				StartGame(my_room, my_name, 1, game_color, game_team, engine1)
+				StartGame(my_room, my_name, 1, game_color, game_team)
 			}
 		} else if in == "leave" {
 			if in_room {

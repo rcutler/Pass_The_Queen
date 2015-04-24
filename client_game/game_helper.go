@@ -12,6 +12,126 @@ import (
 	//"time"
 )
 
+func (g *Game) ChangeTeam() {
+	if game_team == 1 {
+		game_team = 2
+	} else {
+		game_team = 1
+	}
+
+}
+
+func (g *Game) ChangeColor() {
+	if game_color == 1 {
+		game_color = 2
+	} else {
+		game_color = 1
+	}
+}
+
+func (g *Game) ListGames() string {
+	temp := ""
+	for room_name, owner := range rooms {
+		fmt.Printf("%v (%v)\n", room_name, owner)
+		//return room_name + " " + owner
+		//return fmt.Sprint("%v (%v)\n", room_name, owner)
+		temp = temp + "\n" + room_name + " " + owner
+	}
+	fmt.Println("")
+	return temp
+}
+
+func (g *Game) Members() string {
+	temp := ""
+	for i := range room_members {
+		fmt.Println(room_members[i])
+		temp = temp + "\n" + room_members[i]
+	}
+	return temp
+}
+
+func (g *Game) JoinRoom(room_name string) {
+	//"join" {
+	if in_room {
+		fmt.Println("Already in a room")
+	} else {
+		//room_name := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
+		if rooms[room_name] == "" {
+			fmt.Println("Error: Room with such name does not exist")
+		} else {
+			game_color = 2
+			game_team = 2
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.JOIN_ROOM)
+			in_room = true
+			my_room = room_name
+		}
+	}
+}
+
+func (g *Game) LeaveRoom() {
+	//"leave" {
+	if in_room {
+		//Delete room if room owner
+		if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
+			messenger.Msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.DELETE_ROOM)
+			delete(rooms, my_room)
+		} else {
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.LEAVE_ROOM)
+		}
+		in_room = false
+		my_room = ""
+		room_members = make([]string, 0, 0)
+	}
+}
+
+func (g *Game) CreateRoom(room_name string) {
+	//"create" {
+	if in_room {
+		fmt.Println("Already in a room")
+	} else {
+		//room_name := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
+		fmt.Println("DEBUG: room_name = ", room_name)
+		game_color = 1
+		game_team = 1
+		messenger.Msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
+		msg := messenger.Msnger.Receive_game_server()
+		if msg.Type == mylib.ACK {
+			fmt.Printf("Creating room: %v\n", room_name)
+			rooms[room_name] = fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
+			in_room = true
+			my_room = room_name
+		} else {
+			fmt.Println("Error: Room name already taken")
+		}
+	}
+}
+
+func (g *Game) StartRoom() {
+	if !in_room {
+		fmt.Println("Not in a room")
+	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
+		fmt.Println("Not the room owner")
+	} else {
+		in_game = true
+		messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
+		messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
+		delete(rooms, my_room)
+		// Need at stuff to set up teams and color
+		//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
+		//start_local_chat(my_room, my_name, 1, game_color, game_team)
+		StartGame(my_room, my_name, 1, game_color, game_team)
+	}
+}
+
+func (c *ChessBoard) Timer() {
+	if game.TeamPlayer == turn%2+1 {
+		c.Time = c.Time - 1
+		qml.Changed(c, &c.Time)
+	}
+}
+
 func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, captured string) {
 	// Do some error checking here to see if valid piece and what not....
 	if board != game.Board && captured != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
@@ -188,6 +308,8 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				qml.Changed(c.Board[origLoc], &c.Board[origLoc].Image)
 				qml.Changed(c.Board[newLoc], &c.Board[newLoc].Image)
 
+				//qml.Changed(capturedPieces.Pieces[capturedPieces.Len-1], &capturedPieces.Pieces[capturedPieces.Len-1].Image)
+
 				// Send message to the opponent before incrementing turn
 				// Send them the current player, the turn value, and the 2 index's.
 				// In this case, send a caputed value equal to [Color][Piece] as a string or something.
@@ -212,8 +334,15 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 func (cp *CapturedPieces) Add(p CapturedPiece) {
 	cp.Pieces = append(cp.Pieces, &p)
 	cp.Len = len(cp.Pieces)
-	//fmt.Println("Length of captured pieces = ", cp.Len)
+	fmt.Println("Length of captured pieces = ", cp.Len)
 	// Add a qml changed part here for the viewing of captured pieces
+	//qml.Changed(cp.Pieces[cp.Len-1], &cp.Pieces[cp.Len-1].Image)
+	//temp := cp.Len - 1
+	//fmt.Println(cp.Pieces[temp])
+}
+
+func (cp *CapturedPieces) Piece(index int) *CapturedPiece {
+	return cp.Pieces[index]
 }
 
 func (c *ChessBoard) SetSquare(index int, square Square) {
@@ -319,6 +448,7 @@ func (c *ChessBoard) initialize() {
 		c.SetSquare(i, *tmp)
 
 	}
+	c.Time = 420
 }
 
 // Create a function to desconstruct the board.

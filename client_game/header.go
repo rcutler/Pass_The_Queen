@@ -16,6 +16,7 @@ type ChessBoard struct {
 	CurrentSquare int
 	NextSquare    int
 	Turn          int
+	Time          int
 }
 
 type Square struct {

@@ -3,8 +3,8 @@ import QtQuick.Window 2.0
 import QtQuick.Controls 1.1
 
 Rectangle {
-	width: Screen.width
-	height: Screen.height
+	width: applicationView.width
+	height: applicationView.height
 
 	// Button For joining a room
 	Button {
@@ -22,6 +22,7 @@ Rectangle {
 			createRoom.visible = false
 			leaveRoom.visible = true
 			listRooms.y = 400
+			game.joinRoom("a") // Replace the string value with value from a text field
 		}
 	}
 
@@ -45,6 +46,9 @@ Rectangle {
 			changeColor.visible = false
 			leaveRoom.visible = false
 			listRooms.y = 300
+			// Create a function for like starting a timer when the game starts if it is your turn or something. And then have another thing to call 
+			game.startRoom()
+			timerGame.start()
 		}
 	}
 
@@ -64,6 +68,7 @@ Rectangle {
 			joinRoom.visible = false
 			createRoom.visible = false
 			listRooms.y = 400
+			game.createRoom("a") // Replace the string value with value from a text field
 		}
 	}
 
@@ -78,6 +83,7 @@ Rectangle {
 		text: "Change Team"
 		onClicked: {
 			// Change the team value in the back end and where it is displayed.
+			game.changeTeam()
 		}
 	}
 
@@ -92,6 +98,7 @@ Rectangle {
 		text: "Change Color"
 		onClicked: {
 			// Change the color value in the back end and where it is displayed
+			game.changeColor()
 		}
 	}	
 
@@ -112,6 +119,7 @@ Rectangle {
 			changeColor.visible = false
 			leaveRoom.visible = false
 			listRooms.y = 300
+			game.leaveRoom()
 		}
 	}
 	
@@ -129,10 +137,17 @@ Rectangle {
 		text: "List Rooms"
 		onClicked: {
 			// Send a message and update the gui
+			game.listGames()
+			// Set some text area equal to the text returned
 		}
 	}
 
-	// Chat box area
+	// Create an item. The item is a text box area with a list of games
 
+
+	// Create an item. The item is a text box area with a list of game members
+
+
+	// Chat box area
 
 }

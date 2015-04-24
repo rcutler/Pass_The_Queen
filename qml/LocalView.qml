@@ -3,8 +3,8 @@ import QtQuick.Window 2.0
 import QtQuick.Controls 1.1
 
 Rectangle {
-	width: Screen.width
-	height: Screen.height
+	width: applicationView.width
+	height: applicationView.height
 	//width: 600
 	//height: 600
 
@@ -16,6 +16,12 @@ Rectangle {
 		x: 20
 		y: 20
 	}
+
+/*	CapturedPieces {
+		id: cp
+		x: 650
+		y: 20
+	}*/
 
 	// Add a button for submitting a move.
 	Button {
@@ -49,7 +55,18 @@ Rectangle {
 	}
 
 	// Add a timer and display thing for it.
+	Item {
+		x: 100
+		y: 450
+		id: test
 
+		Text {
+			id: timerText
+			font.pointSize: 24
+			color: "white"
+			text: chessBoard.time
+		}
+	}
 
 	// Add the CapturedPieces File
 
