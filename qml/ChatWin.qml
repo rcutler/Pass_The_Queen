@@ -12,7 +12,7 @@ Item {
     ListModel {
         id: chatContent
         ListElement {
-            content: "Connected."
+            content: "chatting.msg"
         }
     }
 
@@ -44,7 +44,7 @@ Item {
 
             var data = input.text
             input.clear()
-            chatContent.append({content: "Me: " + data})
+            //chatContent.append({content: "Me: " + data})
             
             //send message out
             chatting.sendChatMsg(data)
@@ -77,7 +77,7 @@ Item {
                     delegate: Component {
                         Text {
                             font.pointSize: 14
-                            text: modelData
+                            text: chatting.msg
                         }
                     }
                 }
