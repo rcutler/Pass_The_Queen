@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	//"encoding/json"
 )
 //chatting message
 type ChatMsg struct{ 
@@ -66,7 +68,19 @@ func Run() error {
 	}
 
 	window := component.CreateWindow(nil)
+
 	window.Show()
+
+
+	// chatContent:=window.Root().ObjectByName("chatContent")
+
+	// type Jason struct{
+	// 	content string
+	// }
+	// c:=Jason{"lalala"}
+	// fmt.Println(c)
+	// chatContent.Call("append","content: lalala")
+
 
 	game_start = 1
 	my_name = os.Args[1]

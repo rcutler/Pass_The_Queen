@@ -60,7 +60,7 @@ Item {
 
             Rectangle {
                 height: parent.height - input.height - 15
-                width: parent.width;
+                width: parent.width
                 color: "#d7d6d5"
                 anchors.top: parent.top
                 border.color: "black"
