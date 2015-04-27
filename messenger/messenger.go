@@ -28,6 +28,8 @@ type Messenger struct {
 	received       []*mylib.Message        //All received messages
 }
 
+var Msnger Messenger
+
 /* Messenger default constructor */
 func NewMessenger(name string) Messenger {
 	var m Messenger

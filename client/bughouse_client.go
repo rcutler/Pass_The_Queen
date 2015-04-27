@@ -2,6 +2,25 @@ package main
 
 import (
 	"Pass_The_Queen/client_game"
+	"fmt"
+	"gopkg.in/qml.v1"
+	"os"
+)
+
+func main() {
+	if err := qml.Run(run); err != nil {
+		fmt.Fprint(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	return client_game.Run()
+}
+
+/*
+import (
+	"Pass_The_Queen/client_game"
 	"Pass_The_Queen/messenger"
 	"Pass_The_Queen/mylib"
 	"bufio"
@@ -248,3 +267,4 @@ func process_messages() {
 	}
 
 }
+*/

@@ -3,20 +3,18 @@
 import QtQuick 2.0
 
 GridView {
-		//id: board
 		
-		property int selectedSquare: -1
-		property int nextSquare: -1
+		property int selectedPiece: -1
 
 		cellWidth: 50
 		cellHeight: 50
-		width: 400
+		width: 50
 		height: 400
 
-		model: chessBoard.len
+		model: capturedPieces.len
 
 		// Can put the delegate into its own file
-		delegate: ChessBoardDelegate {
-			id: boardDelegate
+		delegate: CapturedPiecesDelegate {
+			id: cpDelegate
 		}
 	}
