@@ -12,23 +12,27 @@ import (
 	//"time"
 )
 
-func (g *Game) ChangeTeam() {
+func (g *Game) ChangeTeam() string {
 	if game_team == 1 {
 		game_team = 2
+		return "Team: 2"
 	} else {
 		game_team = 1
+		return "Team: 1"
 	}
-	fmt.Println(game_team)
+	//fmt.Println(game_team)
 
 }
 
-func (g *Game) ChangeColor() {
+func (g *Game) ChangeColor() string {
 	if game_color == 1 {
 		game_color = 2
+		return "Color: Black"
 	} else {
 		game_color = 1
+		return "Color: White"
 	}
-	fmt.Println(game_color)
+	//fmt.Println(game_color)
 }
 
 func (g *Game) ListGames() string {
@@ -110,7 +114,7 @@ func (g *Game) CreateRoom(room_name string) {
 	}
 }
 
-func (g *Game) StartRoom(host int) {
+func (g *Game) StartRoom(host int, boardNum int) {
 	if !in_room {
 		fmt.Println("Not in a room")
 	} else {
@@ -124,7 +128,7 @@ func (g *Game) StartRoom(host int) {
 		// Need at stuff to set up teams and color
 		//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
 		//start_local_chat(my_room, my_name, 1, game_color, game_team)
-		StartGame(my_room, my_name, 1, game_color, game_team)
+		StartGame(my_room, my_name, boardNum, game_color, game_team)
 	}
 }
 
