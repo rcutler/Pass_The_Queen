@@ -9,26 +9,41 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
-//Todo's:
-//----Current goals-----
-//Add support for nodes leaving the global network (replace supernodes if needed, etc.)
-//-----Future-------
-//Add GUI
-//Add DNS lookup to find server address
-//Add heartbeat messages in case nodes fail/leave
-//Allow nodes to send global messages until the game actually starto
-//Replace supernodes in case nodes fail/leave via election
-//Make supernode network multi-tiered
-//Integrate with game client
+//Starting a game (host):
+//1. (client.go) sendMessage(START_GAME)
+//2. (client.go) msnger.Leave_global()
+//-> (messenger.go) send LEAVE_GLOBAL (first to server -> ACK, then other nodes)
+//-> (messenger.go) kill all node connections
+//3. (client.go) msnger.connect(members[])
+//-> (messenger.go) connect to members[]
 
-var supernodes []string
-var member_count []int
+//Starting a game (member):
+//1. (client.go) receive START_GAME with room == my_room
+//2. (client.go) msnger.Leave_global()
+//-> (messenger.go) send LEAVE_GLOBAL (first to server -> ACK, then other nodes)
+//-> (messenger.go) kill all node connections
+//3. (client.go) msnger.connect(members[])
+//-> (messenger.go) connect to members[]
+
+//Supernode leave network:
+//1. (client.go) receive LEAVE_GLOBAL with msg.is_supernode && (~is_supernode) && msg.origSource == msg.Source (|| heartbeat fails)
+//-> (server.go) receive LEAVE_GLOBAL with msg.is_supernode (|| SUPER_MISSING from a child) -> remove from supernode table
+//2. (client.go) msnger.Leave_global()
+//-> (messenger.go) kill all connections
+//3. (client.go) msnger.Join_global()
+//-> (messenger.go) sendGameServer(REQUEST_CONN_LIST)
+
+var supernodes map[string]int
 var rooms map[string]string
+var lock sync.Mutex
+var test int
 
 func serverSocketConnection(conn net.Conn) {
 
+	test = 0
 	defer conn.Close()
 
 	enc := gob.NewEncoder(conn)
@@ -36,29 +51,27 @@ func serverSocketConnection(conn net.Conn) {
 	for {
 		var msg mylib.Message
 		dec.Decode(&msg)
+		lock.Lock()
 		if msg.Type == mylib.REQUEST_CONN_LIST {
 			fmt.Printf("Accepted connection from: %v\n", msg.Content)
 			min_count := len(supernodes)
-			min_index := 0
-			for i := range member_count {
-				if member_count[i] < min_count {
-					min_count = member_count[i]
-					min_index = i
+			min_name := ""
+			for node, num_members := range supernodes {
+				if num_members < min_count {
+					min_count = num_members
+					min_name = node
 				}
 			}
 			reply := ""
 			if min_count < len(supernodes) {
-				reply = fmt.Sprintf("false %v", supernodes[min_index])
-				member_count[min_index]++
+				reply = fmt.Sprintf("false %v", min_name)
+				supernodes[min_name]++
 			} else {
 				reply = "true"
-				supernodes = append(supernodes, msg.Content)
-				member_count = append(member_count, 0)
-				for i := range supernodes {
-					if supernodes[i] != msg.Content {
-						reply = fmt.Sprintf("%v %v", reply, supernodes[i])
-					}
+				for node, _ := range supernodes {
+					reply = fmt.Sprintf("%v %v", reply, node)
 				}
+				supernodes[msg.Content] = 0
 			}
 			enc.Encode(&mylib.Message{reply, "server", "server", strings.Split(msg.Content, ":")[1], false, mylib.REQUEST_CONN_LIST, nil})
 		} else if msg.Type == mylib.CREATE_ROOM {
@@ -77,12 +90,20 @@ func serverSocketConnection(conn net.Conn) {
 			}
 		} else if msg.Type == mylib.START_GAME {
 			delete(rooms, msg.Content)
-			return
 		} else if msg.Type == mylib.DELETE_ROOM {
 			delete(rooms, msg.Content)
+		} else if msg.Type == mylib.LEAVE_GLOBAL {
+			if msg.Supernode {
+				delete(supernodes, msg.Content)
+			} else if supernodes[msg.Content] > 0 {
+				supernodes[msg.Content]--
+			}
+			enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.ACK, nil})
 		} else {
+			lock.Unlock()
 			return
 		}
+		lock.Unlock()
 	}
 
 }
@@ -102,6 +123,7 @@ func serverSocket(ln net.Listener) {
 func main() {
 	fmt.Println("starting server")
 	rooms = make(map[string]string)
+	supernodes = make(map[string]int)
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		fmt.Println("Failed to set up server on port 8080")
@@ -121,8 +143,8 @@ func main() {
 		case in == "quit" || in == "exit" || in == "q":
 			return
 		case in == "supernodes":
-			for i := range supernodes {
-				fmt.Println(supernodes[i])
+			for node, num_members := range supernodes {
+				fmt.Printf("%v: %v\n", node, num_members)
 			}
 		case in == "rooms":
 			for room_name, owner := range rooms {

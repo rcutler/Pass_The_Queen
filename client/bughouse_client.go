@@ -2,6 +2,25 @@ package main
 
 import (
 	"Pass_The_Queen/client_game"
+	"fmt"
+	"gopkg.in/qml.v1"
+	"os"
+)
+
+func main() {
+	if err := qml.Run(run); err != nil {
+		fmt.Fprint(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	return client_game.Run()
+}
+
+/*
+import (
+	"Pass_The_Queen/client_game"
 	"Pass_The_Queen/messenger"
 	"Pass_The_Queen/mylib"
 	"bufio"
@@ -19,7 +38,6 @@ var in_game bool
 var rooms map[string]string
 var game_team int
 var game_color int
-var game_start int
 
 var msnger messenger.Messenger
 
@@ -28,7 +46,6 @@ var room_members []string
 
 func main() {
 
-	game_start = 1
 	my_name = os.Args[1]
 	in_room = false
 	in_game = false
@@ -36,9 +53,7 @@ func main() {
 
 	msnger = messenger.NewMessenger(my_name)
 
-	fmt.Print("reached")
 	msnger.Login()
-	fmt.Print("reached")
 
 	go process_messages()
 
@@ -101,23 +116,16 @@ func main() {
 				msnger.Send_game_server(my_room, mylib.START_GAME)
 				msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.START_GAME)
 				delete(rooms, my_room)
-				// Need at stuff to set up teams and color
-				//fmt.Println("DEBUG start command from owner: ", my_room, " ", my_name, " ", 1, " ", game_color, " ", game_team)
-				//start_local_chat(my_room, my_name, 1, game_color, game_team)
-				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+				msnger.Leave_global()
+				msnger.Join_local(room_members)
+				start_game()
 			}
 			//Leave a room
-		} else if in == "start_guest" {
-			if !in_room {
-				fmt.Println("Not in a room")
-			} else if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, msnger.Port) {
-				fmt.Println("The room owner, use 'start' instead")
-			} else {
-				in_game = true
-				client_game.StartGame(my_room, my_name, 1, game_color, game_team)
-			}
 		} else if in == "leave" {
-			if in_room {
+			if in_game {
+				msnger.Leave_local()
+				msnger.Join_global()
+			} else if in_room {
 				//Delete room if room owner
 				if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, msnger.Port) {
 					msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
@@ -129,6 +137,9 @@ func main() {
 				in_room = false
 				my_room = ""
 				room_members = make([]string, 0, 0)
+			} else {
+				msnger.Leave_global()
+				return
 			}
 			//Print list of room members
 		} else if in == "members" {
@@ -174,6 +185,15 @@ func main() {
 	}
 }
 
+func start_game() {
+	fmt.Println("Inside start_game")
+	//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+}
+
+func start_game_guest() {
+	fmt.Println("Inside start_game_guest")
+	//client_game.StartGame(my_room, my_name, 1, game_color, game_team)
+}
 func process_messages() {
 	var content string
 
@@ -196,25 +216,14 @@ func process_messages() {
 			if my_room == decoded[0] {
 				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
 			}
-		} else if msg.Type == mylib.START_GAME { // Shouldn't be called any more...
-			// Or if received and not the game host, do the start_guest functionality.
+		} else if msg.Type == mylib.START_GAME {
 			decoded := strings.Split(content, ":")
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
 				in_game = true
-				msnger.Send_message(fmt.Sprintf("%v:%v:%v", decoded[0], my_name, msnger.Port), msg.Type)
-				// Need at stuff to set up teams and color
-				fmt.Println("DEBUG: game_color = ", game_color, " game_team = ", game_team, " player = ", my_name, " game_start = ", game_start)
-				if game_start == 1 && game_team == 1 {
-					game_start++
-					fmt.Println("DEBUG: game_start = ", game_start)
-					client_game.StartGame(my_room, my_name, 1, game_color, game_team)
-				}
-				game_start++
-				return
-			}
-			if msg.Source == decoded[1] {
-				return
+				msnger.Leave_global()
+				msnger.Join_local(room_members)
+				start_game_guest()
 			}
 		} else if msg.Type == mylib.DELETE_ROOM {
 			decoded := strings.Split(content, ":")
@@ -235,6 +244,11 @@ func process_messages() {
 					}
 				}
 			}
+		} else if msg.Type == mylib.LEAVE_GLOBAL {
+			if msg.Orig_source == msg.Source && msg.Supernode && !msnger.Is_supernode {
+				msnger.Leave_global()
+				msnger.Join_global()
+			}
 		} else if msg.Type == mylib.MOVE {
 			fmt.Println("Got a move message")
 			decoded := strings.Split(content, ":")
@@ -253,3 +267,4 @@ func process_messages() {
 	}
 
 }
+*/
