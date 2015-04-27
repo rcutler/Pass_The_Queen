@@ -241,8 +241,8 @@ func start_network(engine1 *qml.Engine) {
 func (chat ChatMsg) SendChatMsg(data string) {
 	fmt.Println("******************************************")
 	fmt.Println("sending: " + data)
-	chatting.Msg+= "Me: "+data+ "\n"
-	qml.Changed(chatting,&chatting.Msg)
+	chatting.Msg+= "Me: "+data
+	// qml.Changed(chatting,&chatting.Msg)
 	fmt.Println("******************************************")
 	messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
@@ -260,9 +260,7 @@ func process_messages() {
 		if msg.Type == mylib.CHAT_MESSAGE {
 			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
 			fmt.Println(content)
-			chatting.Msg+= content + "\n"
-			qml.Changed(chatting,&chatting.Msg)
-
+			chatting.Msg+= msg.+data
 		} else if msg.Type == mylib.CREATE_ROOM {
 			decoded := strings.Split(content, ":")
 			rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
