@@ -129,7 +129,7 @@ func main() {
 				//Delete room if room owner
 				if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, msnger.Port) {
 					msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
-					msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.DELETE_ROOM)
+308     //m.Send_message(m.supernode, my					msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.DELETE_ROOM)
 					delete(rooms, my_room)
 				} else {
 					msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, msnger.Port), mylib.LEAVE_ROOM)
@@ -244,11 +244,6 @@ func process_messages() {
 					}
 				}
 			}
-		} else if msg.Type == mylib.LEAVE_GLOBAL {
-			if msg.Orig_source == msg.Source && msg.Supernode && !msnger.Is_supernode {
-				msnger.Leave_global()
-				msnger.Join_global()
-			}
 		} else if msg.Type == mylib.MOVE {
 			fmt.Println("Got a move message")
 			decoded := strings.Split(content, ":")
@@ -266,5 +261,4 @@ func process_messages() {
 		msg.Type = mylib.NONE
 	}
 
-}
-*/
+}*/

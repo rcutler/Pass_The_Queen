@@ -44,11 +44,11 @@ func NewMessenger(name string) Messenger {
 func (m *Messenger) Login() {
 
 	fmt.Println("starting client")
-	fmt.Println("contacting team4.ece842.com for game server address (todo)")
-	fmt.Println("contacting game server")
+	fmt.Println("contacting team4.ece842.com")
 
 	//Connect to server
-	conn, err := net.Dial("tcp", "localhost:8080")
+	//conn, err := net.Dial("tcp", "localhost:8080")
+	conn, err := net.Dial("tcp", "52.11.139.181:8080")
 
 	if err != nil {
 		fmt.Println("Failed to connect to server on Port 8080")
@@ -161,7 +161,7 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 		dec.Decode(&msg)
 		content := msg.Content
 
-		//	fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
+		//fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
 
 		if msg.Type != mylib.NONE {
 
@@ -220,6 +220,11 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 				if success {
 					break
 				}
+			}
+			supernode_name := strings.Split(m.supernode, ":")[0]
+			if !m.Is_supernode && name == supernode_name {
+				m.Leave_global()
+				m.Join_global()
 			}
 			return
 		}
@@ -300,7 +305,7 @@ func (m *Messenger) Leave_global() {
 	}
 
 	m.v_clock.Clear()
-	m.Send_message(m.supernode, mylib.LEAVE_GLOBAL)
+	//m.Send_message(m.supernode, mylib.LEAVE_GLOBAL)
 
 	for i := range m.global_conns {
 		(*m.global_conns[i]).Close()

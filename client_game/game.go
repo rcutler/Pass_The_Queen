@@ -262,7 +262,9 @@ func (chat ChatMsg) SendChatMsg(data string) {
 	}
 
 	fmt.Println("******************************************")
+
 	fmt.Println("sending:" + data)
+
 	fmt.Println("******************************************")
 	messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
@@ -329,11 +331,6 @@ func process_messages() {
 						break
 					}
 				}
-			}
-		} else if msg.Type == mylib.LEAVE_GLOBAL {
-			if msg.Orig_source == msg.Source && msg.Supernode && !messenger.Msnger.Is_supernode {
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_global()
 			}
 		} else if msg.Type == mylib.MOVE {
 			fmt.Println("Got a move message")

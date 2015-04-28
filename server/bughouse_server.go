@@ -43,6 +43,8 @@ var test int
 
 func serverSocketConnection(conn net.Conn) {
 
+	is_supernode := false
+	supernode_name := ""
 	test = 0
 	defer conn.Close()
 
@@ -64,10 +66,14 @@ func serverSocketConnection(conn net.Conn) {
 			}
 			reply := ""
 			if min_count < len(supernodes) {
+				is_supernode = false
+				supernode_name = min_name
 				reply = fmt.Sprintf("false %v", min_name)
 				supernodes[min_name]++
 			} else {
 				reply = "true"
+				is_supernode = true
+				supernode_name = msg.Content
 				for node, _ := range supernodes {
 					reply = fmt.Sprintf("%v %v", reply, node)
 				}
@@ -101,6 +107,11 @@ func serverSocketConnection(conn net.Conn) {
 			enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.ACK, nil})
 		} else {
 			lock.Unlock()
+			if is_supernode {
+				delete(supernodes, supernode_name)
+			} else if supernodes[supernode_name] > 0 {
+				supernodes[supernode_name]--
+			}
 			return
 		}
 		lock.Unlock()
