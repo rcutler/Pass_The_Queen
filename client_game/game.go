@@ -241,8 +241,8 @@ func start_network(engine1 *qml.Engine) {
 func (chat ChatMsg) SendChatMsg(data string) {
 	fmt.Println("******************************************")
 	fmt.Println("sending: " + data)
-	chatting.Msg+= "Me: "+data+ "\n"
-	qml.Changed(chatting,&chatting.Msg)
+	chatting.Msg += "Me: " + data + "\n"
+	qml.Changed(chatting, &chatting.Msg)
 	fmt.Println("******************************************")
 	messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
@@ -260,8 +260,8 @@ func process_messages() {
 		if msg.Type == mylib.CHAT_MESSAGE {
 			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
 			fmt.Println(content)
-			chatting.Msg+= content + "\n"
-			qml.Changed(chatting,&chatting.Msg)
+			chatting.Msg += content + "\n"
+			qml.Changed(chatting, &chatting.Msg)
 
 		} else if msg.Type == mylib.CREATE_ROOM {
 			decoded := strings.Split(content, ":")
@@ -298,11 +298,6 @@ func process_messages() {
 						break
 					}
 				}
-			}
-		} else if msg.Type == mylib.LEAVE_GLOBAL {
-			if msg.Orig_source == msg.Source && msg.Supernode && !messenger.Msnger.Is_supernode {
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_global()
 			}
 		} else if msg.Type == mylib.MOVE {
 			fmt.Println("Got a move message")
