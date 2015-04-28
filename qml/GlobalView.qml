@@ -9,6 +9,10 @@ Rectangle {
 	property int host: 0
 	property int boardNum: 1
 
+	GlobalChatWin{
+		x:600
+		y:100
+	}
 	// Button For joining a room
 	Button {
 		x: 200

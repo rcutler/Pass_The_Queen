@@ -13,6 +13,7 @@ import (
 )
 
 var chatting *ChatMsg
+var globalchatting *ChatMsg
 var recv_msg string
 
 var game *Game
@@ -61,12 +62,16 @@ func Run() error {
 	tmp4 := &ChatMsg{}
 	chatting = tmp4
 
+	tmp5 := &ChatMsg{}
+	globalchatting = tmp5
+
 	chessBoard.initialize()
 
 	engine.Context().SetVar("game", game)
 	engine.Context().SetVar("chessBoard", chessBoard)
 	//chat room variable
 	engine.Context().SetVar("chatting", chatting)
+	engine.Context().SetVar("globalchatting",globalchatting)
 
 	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/Application.qml")
 
@@ -239,10 +244,25 @@ func start_network(engine1 *qml.Engine) {
 }
 
 func (chat ChatMsg) SendChatMsg(data string) {
+
+
+	if strings.HasPrefix( data, "L ") {
+		//content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"L "))
+		tmp1:=strings.TrimLeft(data,"L ")
+	
+		chatting.Msg+= "Me: "+tmp1 + "\n"
+		qml.Changed(chatting,&chatting.Msg)
+			
+	}else if strings.HasPrefix( data, "G "){
+		//content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"G "))
+		tmp2:=strings.TrimLeft(data,"G ")
+	
+		globalchatting.Msg+= "Me: "+tmp2 + "\n"
+		qml.Changed(globalchatting,&globalchatting.Msg)
+	}
+
 	fmt.Println("******************************************")
-	fmt.Println("sending: " + data)
-	chatting.Msg+= "Me: "+data+ "\n"
-	qml.Changed(chatting,&chatting.Msg)
+	fmt.Println("sending:" + data)
 	fmt.Println("******************************************")
 	messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
@@ -258,10 +278,21 @@ func process_messages() {
 		}
 		content = msg.Content
 		if msg.Type == mylib.CHAT_MESSAGE {
-			content = fmt.Sprintf("%v says: %v", msg.Source, msg.Content)
-			fmt.Println(content)
-			chatting.Msg+= content + "\n"
-			qml.Changed(chatting,&chatting.Msg)
+			mesge:=msg.Content
+
+			if strings.HasPrefix( mesge, "L ") {
+				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"L "))
+				fmt.Println("sadf     "+content)
+				chatting.Msg+= content + "\n"
+				qml.Changed(chatting,&chatting.Msg)
+			
+			}else if strings.HasPrefix( mesge, "G "){
+				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"G "))
+				fmt.Println(content)
+				globalchatting.Msg+= content + "\n"
+				qml.Changed(globalchatting,&globalchatting.Msg)
+			}
+			
 
 		} else if msg.Type == mylib.CREATE_ROOM {
 			decoded := strings.Split(content, ":")

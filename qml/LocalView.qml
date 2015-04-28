@@ -19,7 +19,7 @@ Rectangle {
 
 	ChatWin {
 		id: chat
-		x: 1000
+		x: 450
 		y: 20
 	}
 /*	CapturedPieces {

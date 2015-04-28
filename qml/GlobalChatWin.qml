@@ -47,7 +47,7 @@ Item {
             //chatContent.append({content: "Me: " + data})
             
             //send message out
-            chatting.sendChatMsg("L "+data)
+            globalchatting.sendChatMsg("G "+data)
             
 
             chatView.positionViewAtEnd()
@@ -77,7 +77,7 @@ Item {
                     delegate: Component {
                         Text {
                             font.pointSize: 14
-                            text: chatting.msg
+                            text: globalchatting.msg
                         }
                     }
                 }
