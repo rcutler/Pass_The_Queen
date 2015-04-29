@@ -86,12 +86,12 @@ Item {
             InputBox {
                 id: input
                 Keys.onReturnPressed: chatBox.sendMessage()
-                height: sendButton.height
-                width: parent.width - sendButton.width - 15
+                height: parent.height*0.15
+                width: parent.width - 10
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
             }
-
+/*
             Button {
                 id: sendButton
                 anchors.right: parent.right
@@ -100,7 +100,7 @@ Item {
                 onClicked: chatBox.sendMessage()
                 anchors.bottom: parent.bottom
             }
-
+*/
         }
     }
 
