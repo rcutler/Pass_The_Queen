@@ -117,7 +117,7 @@ func (g *Game) StartRoom(host int, boardNum int) {
 		fmt.Println("Not the room owner")
 		messenger.Msnger.Leave_global()
 		messenger.Msnger.Join_local(room_members)
-		StartGame(my_room, my_name, 1, game_color, game_team)
+		StartGame(my_room, my_name, boardNum, game_color, game_team)
 	} else {
 		//if host == 1 {
 		messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
@@ -135,38 +135,88 @@ func (g *Game) StartRoom(host int, boardNum int) {
 }
 
 func (c *ChessBoard) Timer() {
-	if game.TeamPlayer == (turn%2)+1 {
-		c.Time = c.Time - 1
-		qml.Changed(c, &c.Time)
+	if c.Time > 0 {
+		if game.PlayerColor-1 == (turn % 2) {
+			c.Time = c.Time - 1
+			qml.Changed(c, &c.Time)
+		}
+	} else {
+		// End of the game
 	}
 }
 
-func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, captured string) {
+func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, capturedI string, capturedT string, capturedU int) {
 	// Do some error checking here to see if valid piece and what not....
 	fmt.Println(board, " ", game.Board)
-	fmt.Println(captured)
+	fmt.Println(capturedI)
 	fmt.Println(team, " ", game.TeamPlayer)
-	if board != game.Board && captured != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
+	if board != game.Board && capturedI != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
 		// Update your captured pieces to add this new piece.
-		fmt.Println("1")
+		captured := new(CapturedPiece)
+		captured.Image = capturedI
+		captured.Type = capturedT
+		captured.TeamPiece = capturedU
+		capturedPieces.Add(*captured)
+		qml.Changed(capturedPieces, &capturedPieces.Len)
+		//fmt.Println("1")
 	} else if board == game.Board && team != game.TeamPlayer {
 		// The turn value should be the same
-		fmt.Println("2")
+		//fmt.Println("2")
 		if turn != turnO {
 			// Incompatible state. Different amounts of turns
 			fmt.Println("Error with the number of turns.")
-			fmt.Println("3")
+			//fmt.Println("3")
 		} else {
 			chessBoard.Update(origL, newL)
-			fmt.Println("4")
+			//fmt.Println("4")
 			turn++
 		}
 	} else { //if board != game.Board && team == game.TeamPlayer {
 		// Can ignore, is a move not from your board
 		// Can ignore if it
-		fmt.Println("5")
+		//fmt.Println("5")
 		//fmt.Println("DEBUG: An update from opponent or team mate that is not on this board has happend. Handled correctly!.")
 		return
+	}
+}
+
+func UpdatePlace(board int, team int, color int, turn0 int, loc int, p int, piecePImage string, piecePType string, piecePTeamPiece int) {
+	fmt.Println("turn0 = ", turn0, " Board turn is = ", turn)
+
+	if board != game.Board && team == game.TeamPlayer {
+		// Remove the piece from captured pieces
+		//capturedPieces.Pieces = append(capturedPieces.Pieces[:piece], capturedPieces.Pieces[piece+1:])
+		tempP := &CapturedPieces{}
+		tempPieces := tempP.Pieces
+		for i := 0; i < capturedPieces.Len; i++ {
+			if i != p {
+				tempPieces = append(tempPieces, capturedPieces.Piece(i))
+			}
+		}
+
+		//tempPieces := capturedPieces.Pieces
+		//tempCP := append(tempPieces[:p], tempPieces[p+1:])
+		capturedPieces.Pieces = tempPieces
+		capturedPieces.Len = len(capturedPieces.Pieces)
+		qml.Changed(capturedPieces, &capturedPieces.Len)
+	} else if board == game.Board && team != game.TeamPlayer {
+		temp := chessBoard.Square(loc)
+		temp.Empty = false
+		temp.FromOtherBoard = true
+		temp.Image = piecePImage
+		temp.OrigPosition = false
+		temp.Type = piecePType
+		temp.TeamPiece = piecePTeamPiece
+
+		chessBoard.Board[loc].Empty = false
+		chessBoard.Board[loc].FromOtherBoard = true
+		chessBoard.Board[loc].Image = piecePImage
+		chessBoard.Board[loc].OrigPosition = false
+		chessBoard.Board[loc].Type = piecePType
+		chessBoard.Board[loc].TeamPiece = piecePTeamPiece
+
+		qml.Changed(chessBoard.Board[loc], &chessBoard.Board[loc].Image)
+		turn++
 	}
 }
 
@@ -208,8 +258,11 @@ func (c *ChessBoard) Update(origLoc int, newLoc int) {
 		origS.FromOtherBoard = false
 		origS.Image = ""
 
+		//		fmt.Println("DEBUG: qml.changed called from update")
+		//		fmt.Println(c.Board[newLoc])
 		qml.Changed(c.Board[origLoc], &c.Board[origLoc].Image)
 		qml.Changed(c.Board[newLoc], &c.Board[newLoc].Image)
+		//		fmt.Println("DEBUG: qml.changed after call from update")
 	}
 }
 
@@ -265,8 +318,12 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				origS.FromOtherBoard = false
 				origS.Image = ""
 
+				//fmt.Println("DEBUG: Calling qml.Changed")
+				//fmt.Println(c.Board[newLoc])
 				qml.Changed(c.Board[origLoc], &c.Board[origLoc].Image)
 				qml.Changed(c.Board[newLoc], &c.Board[newLoc].Image)
+
+				//fmt.Println("DEBUG: Finished calling qml.Changed")
 
 				// Send message to the opponent before incrementing turn
 				// Send them the current player, the turn value, and the 2 index's.
@@ -274,8 +331,8 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				// Also need to send board value.
 				// Message content as follows:
 				// board_num:team:current_player:turn:origLoc:newLoc: :
-				temp := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, origLoc, newLoc, "")
-				fmt.Println("DEBUG: state message to be sent accross network = ", temp)
+				temp := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, origLoc, newLoc, "", "", 0)
+				//fmt.Println("DEBUG: state message to be sent accross network = ", temp)
 				// client.Send_move(temp)
 				// Find some way of having main send a message of temp to the other nodes.
 				turn++
@@ -285,7 +342,7 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 			} else {
 				// For enemy piece, record the captured piece, move the piece there and end the turn.
 				// Involves sending info over the network and changing the turn value to the other team.
-				fmt.Println("Need to finish this....")
+				//fmt.Println("DEBUG: capturedPieces before = ", capturedPieces)
 				// Record the captured Piece and add it to the array of captured pieces...
 				// Create a gridview to view all of the caputred pieces....
 				captured := new(CapturedPiece)
@@ -326,16 +383,20 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				qml.Changed(c.Board[newLoc], &c.Board[newLoc].Image)
 
 				//qml.Changed(capturedPieces.Pieces[capturedPieces.Len-1], &capturedPieces.Pieces[capturedPieces.Len-1].Image)
-
+				//fmt.Println("DEBUG: capturedPieces after = ", capturedPieces)
+				qml.Changed(capturedPieces, &capturedPieces.Len)
 				// Send message to the opponent before incrementing turn
 				// Send them the current player, the turn value, and the 2 index's.
 				// In this case, send a caputed value equal to [Color][Piece] as a string or something.
 
-				turn++
 				// Add a send captured pieces to partner
-				cp := fmt.Sprintf("%v-%v", captured.Type, captured.Image)
-				temp := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, origLoc, newLoc, cp)
-				fmt.Println("DEBUG: state message to be sent accross network = ", temp)
+				//cp := fmt.Sprintf("%v-%v", captured.Type, captured.Image)
+				temp := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, origLoc, newLoc, captured.Image, captured.Type, captured.TeamPiece)
+
+				turn++
+
+				//fmt.Println("DEBUG: state message to be sent accross network = ", temp)
+				messenger.Msnger.Send_message(temp, mylib.MOVE)
 
 			}
 		} else {
@@ -345,6 +406,38 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 		fmt.Println("Can't move a piece when it is not your turn!")
 		//fmt.Println("For testing, increment turn...")
 		//turn++
+	}
+}
+
+func (c *ChessBoard) PlacePiece(loc int, p int) {
+	if game.PlayerColor == (turn%2)+1 {
+		piece := capturedPieces.Piece(p)
+		temp := c.Square(loc)
+		temp.Empty = false
+		temp.FromOtherBoard = true
+		temp.Image = piece.Image
+		temp.OrigPosition = false
+		temp.Type = piece.Type
+		temp.TeamPiece = piece.TeamPiece
+		qml.Changed(c.Board[loc], &c.Board[loc].Image)
+
+		temp2 := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v", game.Board, game.TeamPlayer, game.PlayerColor, turn, loc, p, piece.Image, piece.Type, piece.TeamPiece)
+
+		turn++
+
+		messenger.Msnger.Send_message(temp2, mylib.PLACE)
+
+		tempP := &CapturedPieces{}
+		tempPieces := tempP.Pieces
+		for i := 0; i < capturedPieces.Len; i++ {
+			if i != p {
+				tempPieces = append(tempPieces, capturedPieces.Piece(i))
+			}
+		}
+		capturedPieces.Pieces = tempPieces
+		capturedPieces.Len = len(capturedPieces.Pieces)
+		qml.Changed(capturedPieces, &capturedPieces.Len)
+
 	}
 }
 

@@ -35,9 +35,17 @@ Component {
 							//console.log("Am I here?")
 						}
 					}
+					else if(cp.selectedPiece != -1){
+						//board.selectedSquare = index
+						//console.log("Set selected Square to index: " + board.selectedSquare + " and the index is: " + index)
+						if(chessBoard.square(index).empty == true){
+							// Place the piece onto the board. Have to check if it is your turn or not. Done in the back end.
+							chessBoard.placePiece(index, cp.selectedPiece)
+							cp.selectedPiece = -1
+						}
+					}
 					else {
 						board.selectedSquare = index
-						//console.log("Set selected Square to index: " + board.selectedSquare + " and the index is: " + index)
 					}
 					//console.log("DONE!")
 				}

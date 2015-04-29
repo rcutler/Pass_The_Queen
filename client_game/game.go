@@ -69,9 +69,10 @@ func Run() error {
 
 	engine.Context().SetVar("game", game)
 	engine.Context().SetVar("chessBoard", chessBoard)
+	engine.Context().SetVar("capturedPieces", capturedPieces)
 	//chat room variable
 	engine.Context().SetVar("chatting", chatting)
-	engine.Context().SetVar("globalchatting",globalchatting)
+	engine.Context().SetVar("globalchatting", globalchatting)
 
 	component, err := engine.LoadFile("../src/Pass_The_Queen/qml/Application.qml")
 
@@ -159,7 +160,7 @@ func start_network(engine1 *qml.Engine) {
 				fmt.Println("Not the room owner")
 				messenger.Msnger.Leave_global()
 				messenger.Msnger.Join_local(room_members)
-				StartGame(my_room, my_name, 1, game_color, game_team)
+				StartGame(my_room, my_name, game.Board, game_color, game_team)
 			} else {
 				in_game = true
 				messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
@@ -168,7 +169,7 @@ func start_network(engine1 *qml.Engine) {
 				messenger.Msnger.Leave_global()
 				messenger.Msnger.Join_local(room_members)
 				//start_game() // Calls StartGame
-				StartGame(my_room, my_name, 1, game_color, game_team)
+				StartGame(my_room, my_name, game.Board, game_color, game_team)
 			}
 			//Leave a room
 			/*		} else if in == "start_guest" {
@@ -245,20 +246,19 @@ func start_network(engine1 *qml.Engine) {
 
 func (chat ChatMsg) SendChatMsg(data string) {
 
-
-	if strings.HasPrefix( data, "L ") {
+	if strings.HasPrefix(data, "L ") {
 		//content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"L "))
-		tmp1:=strings.TrimLeft(data,"L ")
-	
-		chatting.Msg+= "Me: "+tmp1 + "\n"
-		qml.Changed(chatting,&chatting.Msg)
-			
-	}else if strings.HasPrefix( data, "G "){
+		tmp1 := strings.TrimLeft(data, "L ")
+
+		chatting.Msg += "Me: " + tmp1 + "\n"
+		qml.Changed(chatting, &chatting.Msg)
+
+	} else if strings.HasPrefix(data, "G ") {
 		//content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"G "))
-		tmp2:=strings.TrimLeft(data,"G ")
-	
-		globalchatting.Msg+= "Me: "+tmp2 + "\n"
-		qml.Changed(globalchatting,&globalchatting.Msg)
+		tmp2 := strings.TrimLeft(data, "G ")
+
+		globalchatting.Msg += "Me: " + tmp2 + "\n"
+		qml.Changed(globalchatting, &globalchatting.Msg)
 	}
 
 	fmt.Println("******************************************")
@@ -280,21 +280,20 @@ func process_messages() {
 		}
 		content = msg.Content
 		if msg.Type == mylib.CHAT_MESSAGE {
-			mesge:=msg.Content
+			mesge := msg.Content
 
-			if strings.HasPrefix( mesge, "L ") {
-				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"L "))
-				fmt.Println("sadf     "+content)
-				chatting.Msg+= content + "\n"
-				qml.Changed(chatting,&chatting.Msg)
-			
-			}else if strings.HasPrefix( mesge, "G "){
-				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge,"G "))
+			if strings.HasPrefix(mesge, "L ") {
+				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge, "L "))
+				fmt.Println("sadf     " + content)
+				chatting.Msg += content + "\n"
+				qml.Changed(chatting, &chatting.Msg)
+
+			} else if strings.HasPrefix(mesge, "G ") {
+				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge, "G "))
 				fmt.Println(content)
-				globalchatting.Msg+= content + "\n"
-				qml.Changed(globalchatting,&globalchatting.Msg)
+				globalchatting.Msg += content + "\n"
+				qml.Changed(globalchatting, &globalchatting.Msg)
 			}
-			
 
 		} else if msg.Type == mylib.CREATE_ROOM {
 			decoded := strings.Split(content, ":")
@@ -342,9 +341,26 @@ func process_messages() {
 			turn, _ := strconv.Atoi(decoded[3])
 			origLoc, _ := strconv.Atoi(decoded[4])
 			newLoc, _ := strconv.Atoi(decoded[5])
-			captured := decoded[6]
+			capturedI := decoded[6]
+			capturedT := decoded[7]
+			capturedU, _ := strconv.Atoi(decoded[8])
 			fmt.Println("DEBUG: decoded = ", decoded)
-			UpdateFromOpponent(board_num, team, color, turn, origLoc, newLoc, captured)
+			UpdateFromOpponent(board_num, team, color, turn, origLoc, newLoc, capturedI, capturedT, capturedU)
+		} else if msg.Type == mylib.PLACE {
+			fmt.Println("Got a place message")
+			decoded := strings.Split(content, ":")
+			// Should be board_num, player_team, player_color, turn, origLoc, newLoc, capture_pieceString
+			board_num, _ := strconv.Atoi(decoded[0])
+			team, _ := strconv.Atoi(decoded[1])
+			color, _ := strconv.Atoi(decoded[2])
+			turn, _ := strconv.Atoi(decoded[3])
+			loc, _ := strconv.Atoi(decoded[4])
+			piece, _ := strconv.Atoi(decoded[5])
+			pieceImage := decoded[6]
+			pieceType := decoded[7]
+			pieceTeam, _ := strconv.Atoi(decoded[8])
+			fmt.Println("DEBUG: decoded = ", decoded)
+			UpdatePlace(board_num, team, color, turn, loc, piece, pieceImage, pieceType, pieceTeam)
 		}
 		msg.Type = mylib.NONE
 	}

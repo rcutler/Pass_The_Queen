@@ -22,11 +22,11 @@ Rectangle {
 		x: 450
 		y: 20
 	}
-/*	CapturedPieces {
+	CapturedPieces {
 		id: cp
-		x: 650
-		y: 20
-	}*/
+		x: 20
+		y: 500
+	}
 
 	// Add a button for submitting a move.
 	Button {

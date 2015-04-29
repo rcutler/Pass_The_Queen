@@ -12,8 +12,10 @@ Each view will be a rectangle the size of the window. Will have a function as pa
 Rectangle {
 	id: applicationView
 
-	width: Screen.width
-	height: Screen.height
+	//width: Screen.width
+	//height: Screen.height
+	width: 600
+	height: 600
 
 	color: "#222222"
 
