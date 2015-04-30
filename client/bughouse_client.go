@@ -76,6 +76,7 @@ func run() error {
 	return Run()
 }
 
+/* Function for starting the game. Sets up initial information and state. */
 func StartGame(room string, player string, board int, color int, team int) {
 	msg := fmt.Sprintf("GAME_START %v %v %v %v", room, board, color, team)
 	for i := range room_members {
@@ -95,6 +96,7 @@ func StartGame(room string, player string, board int, color int, team int) {
 	qml.Changed(game, &game.InGame)
 }
 
+/* Function for ending the game. Tears down state and sets up global chat. */
 func EndGame(board int, team int, reason string) {
 	errlog("GAME_END")
 	game.InGame = false
@@ -116,6 +118,7 @@ func EndGame(board int, team int, reason string) {
 	qml.Changed(chessBoard, &chessBoard.Time)
 }
 
+/* Initilization of gui. Also sets variables accessible between gui and backend. */
 func Run() error {
 	engine := qml.NewEngine()
 
@@ -228,6 +231,7 @@ func errlog(message string) {
 	fo.Sync()
 }
 
+/* Send a chat message */
 func (chat ChatMsg) SendChatMsg(data string) {
 
 	if strings.HasPrefix(data, "L ") {
@@ -357,6 +361,7 @@ func process_messages() {
 	}
 }
 
+/* Function for changing a players team when setting up the room */
 func (g *Game) ChangeTeam() string {
 	if game_team == 1 {
 		game_team = 2
@@ -367,6 +372,7 @@ func (g *Game) ChangeTeam() string {
 	}
 }
 
+/* Function for changing a players color when setting up the room */
 func (g *Game) ChangeColor() string {
 	if game_color == 1 {
 		game_color = 2
@@ -377,6 +383,7 @@ func (g *Game) ChangeColor() string {
 	}
 }
 
+/* Function for listing the game rooms available to join. */
 func (g *Game) ListGames() string {
 	temp := ""
 	for room_name, _ := range rooms {
@@ -385,6 +392,7 @@ func (g *Game) ListGames() string {
 	return temp
 }
 
+/* Checks if the string is a valid room name in the available rooms. */
 func (g *Game) CheckGames(input string) bool {
 	for room_name, _ := range rooms {
 		if room_name == input {
@@ -394,6 +402,7 @@ func (g *Game) CheckGames(input string) bool {
 	return false // No matches found
 }
 
+/* Lists the members in a game room. */
 func (g *Game) Members() string {
 	temp := ""
 	for i := range room_members {
@@ -403,6 +412,7 @@ func (g *Game) Members() string {
 	return temp
 }
 
+/* Function for a node to join a game room. */
 func (g *Game) JoinRoom(room_name string) {
 	if in_room {
 		fmt.Println("Already in a room")
@@ -419,6 +429,7 @@ func (g *Game) JoinRoom(room_name string) {
 	}
 }
 
+/* Function for a node to leave a game room. */
 func (g *Game) LeaveRoom() {
 	if in_game {
 		messenger.Msnger.Leave_local()
@@ -438,6 +449,7 @@ func (g *Game) LeaveRoom() {
 	}
 }
 
+/* Function for a node to create a game room. */
 func (g *Game) CreateRoom(room_name string) {
 	if in_room {
 		fmt.Println("Already in a room")
@@ -458,6 +470,7 @@ func (g *Game) CreateRoom(room_name string) {
 	}
 }
 
+/* Function for node to start the game when in a game room. */
 func (g *Game) StartRoom(host int, boardNum int) {
 	if !in_room {
 		fmt.Println("Not in a room")
@@ -478,6 +491,7 @@ func (g *Game) StartRoom(host int, boardNum int) {
 	}
 }
 
+/* Function to decrement time once timer starts and tests for an end of game condition. */
 func (c *ChessBoard) Timer() {
 	if c.Time > 0 && game.InGame {
 		if game.PlayerColor-1 == (turn % 2) {
@@ -491,6 +505,7 @@ func (c *ChessBoard) Timer() {
 	}
 }
 
+/* Updates the board start when receiving a move over the network from an opponent on the same board. */
 func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, capturedI string, capturedT string, capturedU int) {
 	if board != game.Board && capturedI != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
 		captured := new(mylib.CapturedPiece)
@@ -515,10 +530,10 @@ func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, ne
 	}
 }
 
+/* Updates the board and captured pieces when receiving a piece placement over the network. */
 func UpdatePlace(board int, team int, color int, turn0 int, loc int, p int, piecePImage string, piecePType string, piecePTeamPiece int) {
 	if board != game.Board && team == game.TeamPlayer {
 		// Remove the piece from captured pieces
-		//capturedPieces.Pieces = append(capturedPieces.Pieces[:piece], capturedPieces.Pieces[piece+1:])
 		tempP := &mylib.CapturedPieces{}
 		tempPieces := tempP.Pieces
 		for i := 0; i < capturedPieces.Len; i++ {
@@ -551,6 +566,7 @@ func UpdatePlace(board int, team int, color int, turn0 int, loc int, p int, piec
 	}
 }
 
+/* Update the board */
 func (c *ChessBoard) Update(origLoc int, newLoc int) {
 	origS := c.Square(origLoc)
 	newS := c.Square(newLoc)
@@ -593,7 +609,7 @@ func (c *ChessBoard) Update(origLoc int, newLoc int) {
 	}
 }
 
-// In move piece, change the turn, and then send the state accross the network.
+/* A function that modifies the local nodes game board and sends notification to other players about the move. */
 func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 	if game.PlayerColor == (turn%2)+1 {
 		// Get the square values at the index locations
@@ -722,6 +738,7 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 	}
 }
 
+/* A function that modifies the local nodes game board and sends notification to other players about the piece placement. */
 func (c *ChessBoard) PlacePiece(loc int, p int) {
 	if game.PlayerColor == (turn%2)+1 {
 		piece := capturedPieces.Piece(p)
@@ -753,19 +770,24 @@ func (c *ChessBoard) PlacePiece(loc int, p int) {
 
 	}
 }
+
+/* Function to setting a square value on a chessboard object. */
 func (c *ChessBoard) SetSquare(index int, square mylib.Square) {
 	c.Board[index] = &square
 }
 
+/* Accessor method for a square value on a chessboard object. */
 func (c *ChessBoard) Square(index int) *mylib.Square {
 	return c.Board[index]
 }
 
+/* Add a square object to a chess board. Used during initialization setup. */
 func (c *ChessBoard) Add(square mylib.Square) {
 	c.Board = append(c.Board, &square)
 	c.Len = len(c.Board)
 }
 
+/* Helper functino for initialization. */
 func (c *ChessBoard) reinitialize() {
 
 	// Add the black pieces
@@ -843,11 +865,13 @@ func (c *ChessBoard) reinitialize() {
 	c.Time = 420
 }
 
+/* Deconstructs the board state at the end of a game. */
 func (c *ChessBoard) Empty() {
 	c.Board = nil
 	c.Len = 0
 }
 
+/* Set up the initial board start when a game begins or after a game ends. */
 func (c *ChessBoard) initialize() {
 	fmt.Println(game.Name)
 
@@ -881,5 +905,3 @@ func (c *ChessBoard) initialize() {
 	}
 	c.reinitialize()
 }
-
-// Create a function to desconstruct the board.
