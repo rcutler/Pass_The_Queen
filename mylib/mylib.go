@@ -18,6 +18,7 @@ const LOCAL_INTRODUCTION int = 13
 const GLOBAL_INTRODUCTION int = 14
 const LEAVE_GLOBAL int = 15
 const PLACE int = 16
+const GAMEOVER int = 17
 
 type Message struct {
 	Content     string

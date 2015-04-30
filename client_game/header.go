@@ -8,6 +8,7 @@ type Game struct {
 	Board       int
 	PlayerColor int
 	TeamPlayer  int
+	InGame      bool
 }
 
 type ChessBoard struct {

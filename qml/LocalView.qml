@@ -28,18 +28,16 @@ Rectangle {
 		y: 500
 	}
 
-	// Add a button for submitting a move.
+	// Add a button for when the game ends
 	Button {
 		x: 100
 		y: 450
 		width: 110
 		height: 30
-		visible: false
+		visible: !game.inGame
 		id: submitMove
-		text: "Submit Move"
+		text: "Leave Room"
 		onClicked: {
-			undoMove.visible = true
-			submitMove.visible = false
 			local.visible = false
 			global.visible = true
 		}
@@ -51,11 +49,12 @@ Rectangle {
 		y: 450
 		width: 110
 		height: 30
-		id: undoMove
-		text: "Undo Move"
+		id: resetSelection
+		text: "Reset Selection"
 		onClicked: {
-			submitMove.visible = true
-			undoMove.visible = false
+			board.nextSquare = -1
+			board.selectedSquare = -1
+			cp.selectedPiece = -1
 		}
 	}
 

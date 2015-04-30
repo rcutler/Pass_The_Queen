@@ -21,6 +21,8 @@ var capturedPieces *CapturedPieces
 var turn int
 var chessBoard *ChessBoard
 
+//var InGame bool = false
+
 var my_name string
 var my_room string
 var in_room bool
@@ -41,9 +43,26 @@ func StartGame(room string, player string, board int, color int, team int) {
 	game.PlayerColor = color
 	game.TeamPlayer = team
 
+	//chessBoard.initialize()
+
 	fmt.Println("DEBUG: Board Values. game.Board = ", game.Board, " board = ", board)
 
 	turn = 0
+
+	game.InGame = true
+	qml.Changed(game, &game.InGame)
+}
+
+func EndGame() {
+	game.InGame = false
+	qml.Changed(game, &game.InGame)
+
+	chessBoard.Empty()
+	qml.Changed(chessBoard, &chessBoard.Len)
+	chessBoard.initialize()
+	qml.Changed(chessBoard, &chessBoard.Board)
+	qml.Changed(chessBoard, &chessBoard.Len)
+	fmt.Println(chessBoard.Len)
 }
 
 func Run() error {
@@ -66,6 +85,8 @@ func Run() error {
 	globalchatting = tmp5
 
 	chessBoard.initialize()
+
+	game.InGame = false
 
 	engine.Context().SetVar("game", game)
 	engine.Context().SetVar("chessBoard", chessBoard)
@@ -361,6 +382,19 @@ func process_messages() {
 			pieceTeam, _ := strconv.Atoi(decoded[8])
 			fmt.Println("DEBUG: decoded = ", decoded)
 			UpdatePlace(board_num, team, color, turn, loc, piece, pieceImage, pieceType, pieceTeam)
+		} else if msg.Type == mylib.GAMEOVER {
+			fmt.Println("Got a end game message")
+			decoded := strings.Split(content, ":")
+			board_num, _ := strconv.Atoi(decoded[0])
+			team, _ := strconv.Atoi(decoded[1])
+			cause := decoded[2]
+			fmt.Println(board_num, " ", team, " ", cause)
+			EndGame()
+			if cause == "King" {
+				// The king was captured
+			} else {
+				// Somebody ran out of time
+			}
 		}
 		msg.Type = mylib.NONE
 	}

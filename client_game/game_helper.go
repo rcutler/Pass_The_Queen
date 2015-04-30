@@ -40,6 +40,15 @@ func (g *Game) ListGames() string {
 	return temp
 }
 
+func (g *Game) CheckGames(input string) bool {
+	for room_name, _ := range rooms {
+		if room_name == input {
+			return true
+		}
+	}
+	return false // No matches found
+}
+
 func (g *Game) Members() string {
 	temp := ""
 	for i := range room_members {
@@ -135,13 +144,14 @@ func (g *Game) StartRoom(host int, boardNum int) {
 }
 
 func (c *ChessBoard) Timer() {
-	if c.Time > 0 {
+	if c.Time > 0 && game.InGame {
 		if game.PlayerColor-1 == (turn % 2) {
 			c.Time = c.Time - 1
 			qml.Changed(c, &c.Time)
 		}
-	} else {
-		// End of the game
+	} else if game.InGame {
+		temp := fmt.Sprintf("%v:%v:%v", game.Board, game.TeamPlayer, "Time")
+		messenger.Msnger.Send_message(temp, mylib.GAMEOVER)
 	}
 }
 
@@ -398,6 +408,10 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				//fmt.Println("DEBUG: state message to be sent accross network = ", temp)
 				messenger.Msnger.Send_message(temp, mylib.MOVE)
 
+				if captured.Type == "King" {
+					temp := fmt.Sprintf("%v:%v:%v", game.Board, game.TeamPlayer, "King")
+					messenger.Msnger.Send_message(temp, mylib.GAMEOVER)
+				}
 			}
 		} else {
 			fmt.Println("Cannot move pieces that are not your own!")
@@ -468,6 +482,88 @@ func (c *ChessBoard) Add(square Square) {
 	c.Len = len(c.Board)
 }
 
+func (c *ChessBoard) reinitialize() {
+
+	// Add the black pieces
+	for i := 0; i < 16; i++ {
+		tmp := c.Square(i)
+		tmp.Empty = false
+		tmp.TeamPiece = BLACK
+		tmp.FromOtherBoard = false
+		tmp.OrigPosition = true
+		if i == 0 || i == 7 {
+			tmp.Type = "Rook"
+			tmp.Image = BLACKROOK
+		} else if i == 1 || i == 6 {
+			tmp.Type = "Knight"
+			tmp.Image = BLACKKNIGHT
+		} else if i == 2 || i == 5 {
+			tmp.Type = "Bishop"
+			tmp.Image = BLACKBISHOP
+		} else if i == 4 {
+			tmp.Type = "King"
+			tmp.Image = BLACKKING
+		} else if i == 3 {
+			tmp.Type = "Queen"
+			tmp.Image = BLACKQUEEN
+		} else {
+			tmp.Type = "Pawn"
+			tmp.Image = BLACKPAWN
+		}
+		c.SetSquare(i, *tmp)
+
+	}
+
+	for i := 16; i < 48; i++ {
+		tmp := c.Square(i)
+
+		tmp.Type = "EMPTY"
+		tmp.Image = ""
+		tmp.Empty = true
+		tmp.TeamPiece = EMPTY
+		tmp.FromOtherBoard = false
+		tmp.OrigPosition = true
+
+		c.SetSquare(i, *tmp)
+	}
+
+	// Add the white pieces
+	for i := 48; i < 64; i++ {
+		tmp := c.Square(i)
+		tmp.Empty = false
+		tmp.TeamPiece = WHITE
+		tmp.FromOtherBoard = false
+		tmp.OrigPosition = true
+		if i == 56 || i == 63 {
+			tmp.Type = "Rook"
+			tmp.Image = WHITEROOK
+		} else if i == 57 || i == 62 {
+			tmp.Type = "Knight"
+			tmp.Image = WHITEKNIGHT
+		} else if i == 58 || i == 61 {
+			tmp.Type = "Bishop"
+			tmp.Image = WHITEBISHOP
+		} else if i == 60 {
+			tmp.Type = "King"
+			tmp.Image = WHITEKING
+		} else if i == 59 {
+			tmp.Type = "Queen"
+			tmp.Image = WHITEQUEEN
+		} else {
+			tmp.Type = "Pawn"
+			tmp.Image = WHITEPAWN
+		}
+		c.SetSquare(i, *tmp)
+
+	}
+	c.Time = 420
+}
+
+func (c *ChessBoard) Empty() {
+	c.Board = nil
+	c.Len = 0
+}
+
 func (c *ChessBoard) initialize() {
 	fmt.Println(game.Name)
 
@@ -499,66 +595,7 @@ func (c *ChessBoard) initialize() {
 		s.OrigPosition = true
 		c.Add(*s)
 	}
-
-	// Add the black pieces
-	for i := 0; i < 16; i++ {
-		tmp := c.Square(i)
-		tmp.Empty = false
-		tmp.TeamPiece = BLACK
-		tmp.FromOtherBoard = false
-		tmp.OrigPosition = true
-		if i == 0 || i == 7 {
-			tmp.Type = "Rook"
-			tmp.Image = BLACKROOK
-		} else if i == 1 || i == 6 {
-			tmp.Type = "Knight"
-			tmp.Image = BLACKKNIGHT
-		} else if i == 2 || i == 5 {
-			tmp.Type = "Bishop"
-			tmp.Image = BLACKBISHOP
-		} else if i == 4 {
-			tmp.Type = "King"
-			tmp.Image = BLACKKING
-		} else if i == 3 {
-			tmp.Type = "Queen"
-			tmp.Image = BLACKQUEEN
-		} else {
-			tmp.Type = "Pawn"
-			tmp.Image = BLACKPAWN
-		}
-		c.SetSquare(i, *tmp)
-
-	}
-	// Add the white pieces
-	for i := 48; i < 64; i++ {
-		tmp := c.Square(i)
-		tmp.Empty = false
-		tmp.TeamPiece = WHITE
-		tmp.FromOtherBoard = false
-		tmp.OrigPosition = true
-		if i == 56 || i == 63 {
-			tmp.Type = "Rook"
-			tmp.Image = WHITEROOK
-		} else if i == 57 || i == 62 {
-			tmp.Type = "Knight"
-			tmp.Image = WHITEKNIGHT
-		} else if i == 58 || i == 61 {
-			tmp.Type = "Bishop"
-			tmp.Image = WHITEBISHOP
-		} else if i == 60 {
-			tmp.Type = "King"
-			tmp.Image = WHITEKING
-		} else if i == 59 {
-			tmp.Type = "Queen"
-			tmp.Image = WHITEQUEEN
-		} else {
-			tmp.Type = "Pawn"
-			tmp.Image = WHITEPAWN
-		}
-		c.SetSquare(i, *tmp)
-
-	}
-	c.Time = 420
+	c.reinitialize()
 }
 
 // Create a function to desconstruct the board.

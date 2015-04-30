@@ -9,26 +9,29 @@ Rectangle {
 	property int host: 0
 	property int boardNum: 1
 
+	property bool butt: false	
+
 	GlobalChatWin{
-		x:600
+		x:370
 		y:100
 	}
 	// Button For joining a room
 	Button {
-		x: 200
+		x: 50
 		y: 200
 		width: 150
 		height: 40
 		id: joinRoom
 		text: "Join a room"
 		onClicked: {
-			if (gameName.text != ""){
+			if (gameName.text != "" && game.checkGames(gameName.text)) {
 				startGame.visible = true
 				changeTeam.visible = true
 				changeColor.visible = true
+				leaveRoom.visible = true
 				joinRoom.visible = false
 				createRoom.visible = false
-				leaveRoom.visible = true
+				host = 1
 				gameName.visible = false
 				gameColor.visible = true
 				gameTeam.visible = true
@@ -38,14 +41,15 @@ Rectangle {
 				gameColor.text = "Color: Black"
 				gameTeam.text = "Team: 2"
 				game.joinRoom(gameName.text) // Replace the string value with value from a text field
+				console.log(gameName.text)
 			}
 		}
 	}
 
 	// Button for starting a room
 	Button {
-		x: 200
-		y: 200
+		x: 50
+		y: 150
 		width: 150
 		height: 40
 		id: startGame
@@ -75,14 +79,16 @@ Rectangle {
 
 	// Button for creating a room
 	Button {
-		x: 200
+		x: 50
 		y: 150
 		width: 150
 		height: 40
 		id: createRoom
 		text: "Create a room"
 		onClicked: {
-			if (gameName.text != "") {
+			console.log(game.checkGames(gameName.text))
+			//game.listGames()
+			if (gameName.text != "" && !game.checkGames(gameName.text)) {
 				startGame.visible = true
 				changeTeam.visible = true
 				changeColor.visible = true
@@ -106,8 +112,8 @@ Rectangle {
 
 	// Button for changing team you are on
 	Button {
-		x: 200
-		y: 400
+		x: 50
+		y: 270
 		width: 150
 		height: 40
 		id: changeTeam
@@ -122,8 +128,8 @@ Rectangle {
 	Text {
 		id: gameTeam
 		visible: false
-		x: 200
-		y: 450
+		x: 50
+		y: 320
 		width: 150
 		height: 40
 
@@ -131,8 +137,8 @@ Rectangle {
 
 	// Button for changing the color you are playing as
 	Button {
-		x: 200
-		y: 300
+		x: 50
+		y: 200
 		width: 150
 		height: 40
 		visible: false
@@ -147,16 +153,16 @@ Rectangle {
 	Text {
 		id: gameColor
 		visible: false
-		x: 200
-		y: 350
+		x: 50
+		y: 250
 		width: 150
 		height: 40
 
 	}
 
 	Button {
-		x: 200
-		y: 500
+		x: 50
+		y: 350
 		width: 150
 		height: 40
 		visible: false
@@ -171,8 +177,8 @@ Rectangle {
 	Text {
 		id: gameBoard
 		visible: false
-		x: 200
-		y: 550
+		x: 50
+		y: 400
 		text: boardNum
 		width: 150
 		height: 40
@@ -181,10 +187,10 @@ Rectangle {
 	TextField {
 		id: gameBoardInput
 		placeholderText: "Enter board number"
-		validator: IntValidator {bottom: 1; top: 100;}
+		validator: IntValidator {bottom: 1; top: 50;}
 		focus: true
-		x: 200
-		y: 570
+		x: 50
+		y: 430
 		visible: false
 		width: 150
 		height: 40
@@ -192,8 +198,8 @@ Rectangle {
 
 	// Button to leave the room currently in
 	Button {
-		x: 200
-		y: 620
+		x: 50
+		y: 480
 		width: 150
 		height: 40
 		id: leaveRoom
@@ -221,7 +227,7 @@ Rectangle {
 
 	// Button to update the list of rooms available
 	Button {
-		x: 200
+		x: 50
 		y: 100
 		width: 150
 		height: 40
@@ -241,13 +247,13 @@ Rectangle {
 		text: "List of available games"
 		width: 300
 		height:100
-		x: 360
+		x: 210
 		y: 100
 	}
 	Text {
 		id: gameList
 		text: ""
-		x: 360
+		x: 210
 		y: 100
 		width: 300
 		height: 110
@@ -257,7 +263,7 @@ Rectangle {
 	TextField {
 		id: gameName
 		placeholderText: "Enter a room name"
-		x: 200
+		x: 50
 		y: 250
 		width: 150
 		height: 40

@@ -14,8 +14,8 @@ Rectangle {
 
 	//width: Screen.width
 	//height: Screen.height
-	width: 600
-	height: 600
+	width: 800
+	height: 700
 
 	color: "#222222"
 
