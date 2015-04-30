@@ -53,16 +53,25 @@ func StartGame(room string, player string, board int, color int, team int) {
 	qml.Changed(game, &game.InGame)
 }
 
-func EndGame() {
+func EndGame(board int, team int, reason string) {
 	game.InGame = false
+	in_room = false
 	qml.Changed(game, &game.InGame)
 
 	chessBoard.Empty()
+	capturedPieces.Empty()
 	qml.Changed(chessBoard, &chessBoard.Len)
+	qml.Changed(capturedPieces, &capturedPieces.Len)
 	chessBoard.initialize()
 	qml.Changed(chessBoard, &chessBoard.Board)
 	qml.Changed(chessBoard, &chessBoard.Len)
 	fmt.Println(chessBoard.Len)
+
+	messenger.Msnger.Leave_local()
+	messenger.Msnger.Join_global()
+	chessBoard.Time = 420
+	qml.Changed(chessBoard, &chessBoard.Time)
+	fmt.Println(board, " ", team, " ", reason)
 }
 
 func Run() error {
@@ -178,10 +187,10 @@ func start_network(engine1 *qml.Engine) {
 			if !in_room {
 				fmt.Println("Not in a room")
 			} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-				//fmt.Println("Not the room owner")
-				//messenger.Msnger.Leave_global()
-				//messenger.Msnger.Join_local(room_members)
-				//StartGame(my_room, my_name, game.Board, game_color, game_team)
+				fmt.Println("Not the room owner")
+				messenger.Msnger.Leave_global()
+				messenger.Msnger.Join_local(room_members)
+				StartGame(my_room, my_name, game.Board, game_color, game_team)
 			} else {
 				in_game = true
 				messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
@@ -331,7 +340,7 @@ func process_messages() {
 				in_game = true
 				messenger.Msnger.Leave_global()
 				messenger.Msnger.Join_local(room_members)
-				StartGame(my_room, my_name, game.Board, game_color, game_team)
+				//StartGame(my_room, my_name, game.Board, game_color, game_team)
 				//start_game_guest()
 			}
 		} else if msg.Type == mylib.DELETE_ROOM {
@@ -390,7 +399,7 @@ func process_messages() {
 			team, _ := strconv.Atoi(decoded[1])
 			cause := decoded[2]
 			fmt.Println(board_num, " ", team, " ", cause)
-			EndGame()
+			EndGame(board_num, team, cause)
 			if cause == "King" {
 				// The king was captured
 			} else {
