@@ -283,13 +283,13 @@ func process_messages() {
 			mesge := msg.Content
 
 			if strings.HasPrefix(mesge, "L ") {
-				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge, "L "))
+				content = fmt.Sprintf("%v says: %v", msg.Orig_source, strings.TrimLeft(mesge, "L "))
 				fmt.Println("sadf     " + content)
 				chatting.Msg += content + "\n"
 				qml.Changed(chatting, &chatting.Msg)
 
 			} else if strings.HasPrefix(mesge, "G ") {
-				content = fmt.Sprintf("%v says: %v", msg.Source, strings.TrimLeft(mesge, "G "))
+				content = fmt.Sprintf("%v says: %v", msg.Orig_source, strings.TrimLeft(mesge, "G "))
 				fmt.Println(content)
 				globalchatting.Msg += content + "\n"
 				qml.Changed(globalchatting, &globalchatting.Msg)

@@ -193,9 +193,9 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 				m.received = append(m.received, &msg)
 
 				//Forward message to other nodes if it did not originate at this node
-				if msg.Type == mylib.CHAT_MESSAGE {
-					content = fmt.Sprintf("%v says: %v", msg.Source, content)
-				}
+				//if msg.Type == mylib.CHAT_MESSAGE {
+				//	content = fmt.Sprintf("%v says: %v", msg.Source, content)
+				//}
 				if msg.Orig_source != m.name {
 					for dest, cur_enc := range m.encoders {
 						//fmt.Printf("Forwarded: %q\n", mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
@@ -245,7 +245,7 @@ func (m *Messenger) Send_message(content string, Type int) {
 /* Receive a message from the network */
 func (m *Messenger) Receive_message() *mylib.Message {
 	if len(m.deliver_buffer) != 0 {
-		//	fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
+		//fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
 		msg := m.deliver_buffer[0]
 		m.deliver_buffer = m.deliver_buffer[1:]
 		return msg
