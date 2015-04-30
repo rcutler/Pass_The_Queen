@@ -14,6 +14,8 @@ import (
 	"Pass_The_Queen/mylib"
 	"fmt"
 	"gopkg.in/qml.v1"
+	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -36,6 +38,7 @@ var game_team int
 var game_color int
 var game_start int
 var room_members []string //List of other players in the same room
+var fo *os.File           //Error log output file
 
 type Game struct {
 	Name        string
@@ -62,6 +65,7 @@ type ChatMsg struct {
 
 /* Main method. Calls qml.Run */
 func main() {
+
 	if err := qml.Run(run); err != nil {
 		fmt.Fprint(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -73,6 +77,12 @@ func run() error {
 }
 
 func StartGame(room string, player string, board int, color int, team int) {
+	msg := fmt.Sprintf("GAME_START %v %v %v %v", room, board, color, team)
+	for i := range room_members {
+		msg = fmt.Sprintf("%v %v", msg, room_members[i])
+	}
+	errlog(msg)
+
 	game.Name = room
 	game.PlayerID = player
 	game.Board = board
@@ -86,6 +96,7 @@ func StartGame(room string, player string, board int, color int, team int) {
 }
 
 func EndGame(board int, team int, reason string) {
+	errlog("GAME_END")
 	game.InGame = false
 	in_room = false
 	qml.Changed(game, &game.InGame)
@@ -152,13 +163,69 @@ func Run() error {
 
 	messenger.Msnger = messenger.NewMessenger(my_name)
 
+	buf := make([]byte, 1024)
+
+	//Check the error log to see if node crashed in the middle of a game
+	fi, err := os.Open(fmt.Sprintf("%v.log", my_name))
+	last_msg := ""
+	if err == nil {
+		for {
+			n, err := fi.Read(buf)
+			if err != nil && err != io.EOF {
+				log.Fatal("", err)
+			}
+			if n == 0 {
+				break
+			}
+			last_msg = string(buf)
+		}
+	}
+	fi.Close()
+
+	last_msg_bits := strings.Split(last_msg, " ")
+
+	//Open up the error log writer
+	fo, err = os.Create(fmt.Sprintf("%v.log", my_name))
+	if err != nil {
+		log.Fatal("", err)
+	}
+	defer fo.Close()
+
 	messenger.Msnger.Login()
+
+	fmt.Println(last_msg)
+
+	//If last message was START_GAME the game crashed in the middle of a game
+	if last_msg_bits[0] == "GAME_START" {
+		//FIXME: code below does not set GUI into right state
+		//	fmt.Println("success")
+		//	my_room = last_msg_bits[1]
+		//	boardNum, _ := strconv.Atoi(last_msg_bits[2])
+		//	game_color, _ = strconv.Atoi(last_msg_bits[3])
+		//	game_team, _ = strconv.Atoi(last_msg_bits[4])
+		//	for i := 5; i < len(last_msg_bits); i++ {
+		//		last_msg_bits[i] = strings.TrimRight(last_msg_bits[i], " ")
+		//		room_members = append(room_members, last_msg_bits[i])
+		//}
+		//messenger.Msnger.Leave_global()
+		//messenger.Msnger.Join_local(room_members)
+		//StartGame(my_room, my_name, boardNum, game_color, game_team)
+	}
 
 	go process_messages()
 
 	window.Wait()
 
 	return nil
+}
+
+/* Log a message */
+func errlog(message string) {
+	buf := []byte(fmt.Sprintf("%v\n", message))
+	empty := make([]byte, 1024-len(buf), 1024-len(buf))
+	buf = append(buf, empty...)
+	fo.Write(buf)
+	fo.Sync()
 }
 
 func (chat ChatMsg) SendChatMsg(data string) {
