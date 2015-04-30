@@ -1,9 +1,17 @@
+/**
+ * bughouse_client.go: Client application for Pass The Queen Bughouse Chess
+ * The client consists of the menu view where rooms/games are
+ * created, joined, and started, and the global chat is located. Once a game
+ * starts the client transitions to the game view where the local chat and
+ * the bughouse chess game itself is located
+ * @author: Nicolas, Ryan, Xingchi
+ */
+
 package main
 
 import (
 	"Pass_The_Queen/messenger"
 	"Pass_The_Queen/mylib"
-	"bufio"
 	"fmt"
 	"gopkg.in/qml.v1"
 	"os"
@@ -16,18 +24,18 @@ var chatting *ChatMsg
 var globalchatting *ChatMsg
 var recv_msg string
 var game *Game
-var capturedPieces *CapturedPieces
+var capturedPieces *mylib.CapturedPieces
 var turn int
 var chessBoard *ChessBoard
-var my_name string
-var my_room string
-var in_room bool
-var in_game bool
-var rooms map[string]string
+var my_name string          //Name of this user
+var my_room string          //Name of the room this user is located in (if any)
+var in_room bool            //Whether this user is in a room
+var in_game bool            //Whether this user is in a game
+var rooms map[string]string //List of rooms and owners
 var game_team int
 var game_color int
 var game_start int
-var room_members []string
+var room_members []string //List of other players in the same room
 
 type Game struct {
 	Name        string
@@ -39,7 +47,7 @@ type Game struct {
 }
 
 type ChessBoard struct {
-	Board         []*Square
+	Board         []*mylib.Square
 	Len           int
 	CurrentSquare int
 	NextSquare    int
@@ -47,53 +55,12 @@ type ChessBoard struct {
 	Time          int
 }
 
-type Square struct {
-	Color          string
-	Type           string
-	Image          string
-	Empty          bool
-	FromOtherBoard bool
-	OrigPosition   bool
-	Index          int
-	TeamPiece      int
-}
-
-type CapturedPieces struct {
-	Pieces []*CapturedPiece
-	Len    int
-}
-
-type CapturedPiece struct {
-	TeamPiece int
-	Image     string
-	Type      string
-}
-
 //chatting message
 type ChatMsg struct {
 	Msg string
 }
 
-const TEAM1 int = 1
-const TEAM2 int = 2
-const EMPTY int = -1
-const WHITE int = 1
-const BLACK int = 2
-const COLOR_WHITE string = "#D18B47"
-const COLOR_BLACK string = "#FFCE9E"
-const BLACKROOK string = "../pieces/Rook_Black_60.png"
-const BLACKKNIGHT string = "../pieces/Knight_Black_60.png"
-const BLACKBISHOP string = "../pieces/Bishop_Black_60.png"
-const BLACKQUEEN string = "../pieces/Queen_Black_60.png"
-const BLACKKING string = "../pieces/King_Black_60.png"
-const BLACKPAWN string = "../pieces/Pawn_Black_60.png"
-const WHITEROOK string = "../pieces/Rook_White_60.png"
-const WHITEKNIGHT string = "../pieces/Knight_White_60.png"
-const WHITEBISHOP string = "../pieces/Bishop_White_60.png"
-const WHITEQUEEN string = "../pieces/Queen_White_60.png"
-const WHITEKING string = "../pieces/King_White_60.png"
-const WHITEPAWN string = "../pieces/Pawn_White_60.png"
-
+/* Main method. Calls qml.Run */
 func main() {
 	if err := qml.Run(run); err != nil {
 		fmt.Fprint(os.Stderr, "error: %v\n", err)
@@ -106,7 +73,6 @@ func run() error {
 }
 
 func StartGame(room string, player string, board int, color int, team int) {
-	fmt.Println("I am in the start game function.... good news.")
 	game.Name = room
 	game.PlayerID = player
 	game.Board = board
@@ -146,7 +112,7 @@ func Run() error {
 
 	chessBoard = temp
 
-	temp2 := &CapturedPieces{}
+	temp2 := &mylib.CapturedPieces{}
 	capturedPieces = temp2
 
 	temp3 := &Game{}
@@ -190,139 +156,9 @@ func Run() error {
 
 	go process_messages()
 
-	start_network(engine)
-
 	window.Wait()
 
 	return nil
-}
-
-func start_network(engine1 *qml.Engine) {
-	fmt.Printf("\nChat:\n")
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		in, _ := reader.ReadString('\n')
-		in = strings.Split(in, "\n")[0]
-		command := strings.Split(in, " ")
-		//Print rooms
-		if in == "rooms" {
-			for room_name, owner := range rooms {
-				fmt.Printf("%v (%v)\n", room_name, owner)
-			}
-			fmt.Println("")
-			//Create a room
-		} else if command[0] == "create" {
-			if in_room {
-				fmt.Println("Already in a room")
-			} else {
-				room_name := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
-				game_color = 1
-				game_team = 1
-				messenger.Msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
-				msg := messenger.Msnger.Receive_game_server()
-				if msg.Type == mylib.ACK {
-					fmt.Printf("Creating room: %v\n", room_name)
-					rooms[room_name] = fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port)
-					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
-					in_room = true
-					my_room = room_name
-				} else {
-					fmt.Println("Error: Room name already taken")
-				}
-			}
-			//Join an existing room
-		} else if command[0] == "join" {
-			if in_room {
-				fmt.Println("Already in a room")
-			} else {
-				room_name := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
-				if rooms[room_name] == "" {
-					fmt.Println("Error: Room with such name does not exist")
-				} else {
-					game_color = 2
-					game_team = 2
-					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.JOIN_ROOM)
-					in_room = true
-					my_room = room_name
-				}
-			}
-		} else if in == "start" {
-			if !in_room {
-				fmt.Println("Not in a room")
-			} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-				fmt.Println("Not the room owner")
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_local(room_members)
-				StartGame(my_room, my_name, game.Board, game_color, game_team)
-			} else {
-				in_game = true
-				messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
-				messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
-				delete(rooms, my_room)
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_local(room_members)
-				StartGame(my_room, my_name, game.Board, game_color, game_team)
-			}
-		} else if in == "leave" {
-			if in_game {
-				messenger.Msnger.Leave_local()
-				messenger.Msnger.Join_global()
-			} else if in_room {
-				//Delete room if room owner
-				if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-					messenger.Msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
-					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.DELETE_ROOM)
-					delete(rooms, my_room)
-				} else {
-					messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.LEAVE_ROOM)
-				}
-				in_room = false
-				my_room = ""
-				room_members = make([]string, 0, 0)
-			} else {
-				messenger.Msnger.Leave_global()
-			}
-			//Print list of room members
-		} else if in == "members" {
-			for i := range room_members {
-				fmt.Println(room_members[i])
-			}
-		} else if command[0] == "set_team" { // Change the current players team.
-			if !in_room {
-				fmt.Println("Not in a room!")
-			} else {
-				if strings.Count(in, " ") == 0 {
-					fmt.Println("Must provide an integer value of either 1 or 2 for set_team")
-				} else {
-					test := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
-					temp, err := strconv.Atoi(test)
-					if err != nil || (temp != 1 && temp != 2) {
-						fmt.Println("Must provide an integer value of either 1 or 2 for set_team")
-					} else {
-						game_team = temp
-					}
-				}
-			}
-		} else if command[0] == "set_color" { // Change the current players color
-			if !in_room {
-				fmt.Println("Not in a room!")
-			} else {
-				if strings.Count(in, " ") == 0 {
-					fmt.Println("Must provide an integer value of either 1 or 2 for set_color")
-				} else {
-					test := strings.Split(in, fmt.Sprintf("%v ", command[0]))[1]
-					temp, err := strconv.Atoi(test)
-					if err != nil || (temp != 1 && temp != 2) {
-						fmt.Println("Must provide an integer value of either 1 or 2 for set_color")
-					} else {
-						game_color = temp
-					}
-				}
-			}
-		} else {
-			messenger.Msnger.Send_message(in, mylib.CHAT_MESSAGE)
-		}
-	}
 }
 
 func (chat ChatMsg) SendChatMsg(data string) {
@@ -340,55 +176,59 @@ func (chat ChatMsg) SendChatMsg(data string) {
 		qml.Changed(globalchatting, &globalchatting.Msg)
 	}
 
-	fmt.Println("******************************************")
-
-	fmt.Println("sending:" + data)
-
-	fmt.Println("******************************************")
 	messenger.Msnger.Send_message(data, mylib.CHAT_MESSAGE)
 }
 
+/* Process messages from the network */
 func process_messages() {
 	var content string
 
 	for {
+		//Get available messages (if any)
 		msg := messenger.Msnger.Receive_message()
+
+		//No message is available
 		if msg.Type == mylib.NONE {
+			//Wait ~1sec and try again
 			time.Sleep(1000000000)
 			continue
 		}
+
 		content = msg.Content
+		//Chat message: print to chat window
 		if msg.Type == mylib.CHAT_MESSAGE {
 			mesge := msg.Content
 
 			if strings.HasPrefix(mesge, "L ") {
-				content = fmt.Sprintf("%v says: %v", msg.Orig_source, strings.TrimLeft(mesge, "L "))
-				fmt.Println("sadf     " + content)
+				content = fmt.Sprintf("%v: %v", msg.Orig_source, strings.TrimLeft(mesge, "L "))
 				chatting.Msg += content + "\n"
 				qml.Changed(chatting, &chatting.Msg)
 
 			} else if strings.HasPrefix(mesge, "G ") {
-				content = fmt.Sprintf("%v says: %v", msg.Orig_source, strings.TrimLeft(mesge, "G "))
-				fmt.Println(content)
+				content = fmt.Sprintf("%v: %v", msg.Orig_source, strings.TrimLeft(mesge, "G "))
 				globalchatting.Msg += content + "\n"
 				qml.Changed(globalchatting, &globalchatting.Msg)
 			}
 
 		} else if msg.Type == mylib.CREATE_ROOM {
+			//A room was created: add room to room list
 			decoded := strings.Split(content, ":")
 			rooms[decoded[0]] = fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3])
 		} else if msg.Type == mylib.JOIN_ROOM {
+			//A node joined a room: add node to members list if this node is in the same room
 			decoded := strings.Split(content, ":")
 			if my_room == decoded[0] {
 				room_members = append(room_members, fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3]))
 			}
 		} else if msg.Type == mylib.START_GAME {
+			//A game was started
 			decoded := strings.Split(content, ":")
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
 				in_game = true
 			}
 		} else if msg.Type == mylib.DELETE_ROOM {
+			//A room was deleted: remove room from room list
 			decoded := strings.Split(content, ":")
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
@@ -397,6 +237,7 @@ func process_messages() {
 				room_members = make([]string, 0, 0)
 			}
 		} else if msg.Type == mylib.LEAVE_ROOM {
+			//A node left a room: remove node from members list if this node is in the same room
 			content = msg.Content
 			decoded := strings.Split(content, ":")
 			if my_room == decoded[0] {
@@ -471,11 +312,9 @@ func (g *Game) ChangeColor() string {
 
 func (g *Game) ListGames() string {
 	temp := ""
-	for room_name, owner := range rooms {
-		fmt.Printf("%v (%v)\n", room_name, owner)
-		temp = temp + "\n" + room_name + " " + owner
+	for room_name, _ := range rooms {
+		temp = temp + "\n" + room_name
 	}
-	fmt.Println("")
 	return temp
 }
 
@@ -587,7 +426,7 @@ func (c *ChessBoard) Timer() {
 
 func UpdateFromOpponent(board int, team int, color int, turnO int, origL int, newL int, capturedI string, capturedT string, capturedU int) {
 	if board != game.Board && capturedI != "" && team == game.TeamPlayer { // Ignore this update then. Or could actually get the captured piece thingy.
-		captured := new(CapturedPiece)
+		captured := new(mylib.CapturedPiece)
 		captured.Image = capturedI
 		captured.Type = capturedT
 		captured.TeamPiece = capturedU
@@ -613,7 +452,7 @@ func UpdatePlace(board int, team int, color int, turn0 int, loc int, p int, piec
 	if board != game.Board && team == game.TeamPlayer {
 		// Remove the piece from captured pieces
 		//capturedPieces.Pieces = append(capturedPieces.Pieces[:piece], capturedPieces.Pieces[piece+1:])
-		tempP := &CapturedPieces{}
+		tempP := &mylib.CapturedPieces{}
 		tempPieces := tempP.Pieces
 		for i := 0; i < capturedPieces.Len; i++ {
 			if i != p {
@@ -670,13 +509,13 @@ func (c *ChessBoard) Update(origLoc int, newLoc int) {
 
 		c.Board[origLoc].Image = ""
 		c.Board[origLoc].Empty = true
-		c.Board[origLoc].TeamPiece = EMPTY
+		c.Board[origLoc].TeamPiece = mylib.EMPTY
 		c.Board[origLoc].Type = "EMPTY"
 		c.Board[origLoc].FromOtherBoard = false
 		c.Board[origLoc].OrigPosition = false
 
 		origS.Empty = true
-		origS.TeamPiece = EMPTY
+		origS.TeamPiece = mylib.EMPTY
 		origS.Type = "EMPTY"
 		origS.OrigPosition = false
 		origS.FromOtherBoard = false
@@ -720,13 +559,13 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 
 				c.Board[origLoc].Image = ""
 				c.Board[origLoc].Empty = true
-				c.Board[origLoc].TeamPiece = EMPTY
+				c.Board[origLoc].TeamPiece = mylib.EMPTY
 				c.Board[origLoc].Type = "EMPTY"
 				c.Board[origLoc].FromOtherBoard = false
 				c.Board[origLoc].OrigPosition = false
 
 				origS.Empty = true
-				origS.TeamPiece = EMPTY
+				origS.TeamPiece = mylib.EMPTY
 				origS.Type = "EMPTY"
 				origS.OrigPosition = false
 				origS.FromOtherBoard = false
@@ -753,7 +592,7 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				// Involves sending info over the network and changing the turn value to the other team.
 				// Record the captured Piece and add it to the array of captured pieces...
 				// Create a gridview to view all of the caputred pieces....
-				captured := new(CapturedPiece)
+				captured := new(mylib.CapturedPiece)
 				captured.Image = newS.Image
 				captured.Type = newS.Type
 				captured.TeamPiece = newS.TeamPiece
@@ -775,13 +614,13 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 
 				c.Board[origLoc].Image = ""
 				c.Board[origLoc].Empty = true
-				c.Board[origLoc].TeamPiece = EMPTY
+				c.Board[origLoc].TeamPiece = mylib.EMPTY
 				c.Board[origLoc].Type = "EMPTY"
 				c.Board[origLoc].FromOtherBoard = false
 				c.Board[origLoc].OrigPosition = false
 
 				origS.Empty = true
-				origS.TeamPiece = EMPTY
+				origS.TeamPiece = mylib.EMPTY
 				origS.Type = "EMPTY"
 				origS.OrigPosition = false
 				origS.FromOtherBoard = false
@@ -834,7 +673,7 @@ func (c *ChessBoard) PlacePiece(loc int, p int) {
 
 		messenger.Msnger.Send_message(temp2, mylib.PLACE)
 
-		tempP := &CapturedPieces{}
+		tempP := &mylib.CapturedPieces{}
 		tempPieces := tempP.Pieces
 		for i := 0; i < capturedPieces.Len; i++ {
 			if i != p {
@@ -847,25 +686,15 @@ func (c *ChessBoard) PlacePiece(loc int, p int) {
 
 	}
 }
-
-func (cp *CapturedPieces) Add(p CapturedPiece) {
-	cp.Pieces = append(cp.Pieces, &p)
-	cp.Len = len(cp.Pieces)
-}
-
-func (cp *CapturedPieces) Piece(index int) *CapturedPiece {
-	return cp.Pieces[index]
-}
-
-func (c *ChessBoard) SetSquare(index int, square Square) {
+func (c *ChessBoard) SetSquare(index int, square mylib.Square) {
 	c.Board[index] = &square
 }
 
-func (c *ChessBoard) Square(index int) *Square {
+func (c *ChessBoard) Square(index int) *mylib.Square {
 	return c.Board[index]
 }
 
-func (c *ChessBoard) Add(square Square) {
+func (c *ChessBoard) Add(square mylib.Square) {
 	c.Board = append(c.Board, &square)
 	c.Len = len(c.Board)
 }
@@ -876,27 +705,27 @@ func (c *ChessBoard) reinitialize() {
 	for i := 0; i < 16; i++ {
 		tmp := c.Square(i)
 		tmp.Empty = false
-		tmp.TeamPiece = BLACK
+		tmp.TeamPiece = mylib.BLACK
 		tmp.FromOtherBoard = false
 		tmp.OrigPosition = true
 		if i == 0 || i == 7 {
 			tmp.Type = "Rook"
-			tmp.Image = BLACKROOK
+			tmp.Image = mylib.BLACKROOK
 		} else if i == 1 || i == 6 {
 			tmp.Type = "Knight"
-			tmp.Image = BLACKKNIGHT
+			tmp.Image = mylib.BLACKKNIGHT
 		} else if i == 2 || i == 5 {
 			tmp.Type = "Bishop"
-			tmp.Image = BLACKBISHOP
+			tmp.Image = mylib.BLACKBISHOP
 		} else if i == 4 {
 			tmp.Type = "King"
-			tmp.Image = BLACKKING
+			tmp.Image = mylib.BLACKKING
 		} else if i == 3 {
 			tmp.Type = "Queen"
-			tmp.Image = BLACKQUEEN
+			tmp.Image = mylib.BLACKQUEEN
 		} else {
 			tmp.Type = "Pawn"
-			tmp.Image = BLACKPAWN
+			tmp.Image = mylib.BLACKPAWN
 		}
 		c.SetSquare(i, *tmp)
 
@@ -908,7 +737,7 @@ func (c *ChessBoard) reinitialize() {
 		tmp.Type = "EMPTY"
 		tmp.Image = ""
 		tmp.Empty = true
-		tmp.TeamPiece = EMPTY
+		tmp.TeamPiece = mylib.EMPTY
 		tmp.FromOtherBoard = false
 		tmp.OrigPosition = true
 
@@ -919,27 +748,27 @@ func (c *ChessBoard) reinitialize() {
 	for i := 48; i < 64; i++ {
 		tmp := c.Square(i)
 		tmp.Empty = false
-		tmp.TeamPiece = WHITE
+		tmp.TeamPiece = mylib.WHITE
 		tmp.FromOtherBoard = false
 		tmp.OrigPosition = true
 		if i == 56 || i == 63 {
 			tmp.Type = "Rook"
-			tmp.Image = WHITEROOK
+			tmp.Image = mylib.WHITEROOK
 		} else if i == 57 || i == 62 {
 			tmp.Type = "Knight"
-			tmp.Image = WHITEKNIGHT
+			tmp.Image = mylib.WHITEKNIGHT
 		} else if i == 58 || i == 61 {
 			tmp.Type = "Bishop"
-			tmp.Image = WHITEBISHOP
+			tmp.Image = mylib.WHITEBISHOP
 		} else if i == 60 {
 			tmp.Type = "King"
-			tmp.Image = WHITEKING
+			tmp.Image = mylib.WHITEKING
 		} else if i == 59 {
 			tmp.Type = "Queen"
-			tmp.Image = WHITEQUEEN
+			tmp.Image = mylib.WHITEQUEEN
 		} else {
 			tmp.Type = "Pawn"
-			tmp.Image = WHITEPAWN
+			tmp.Image = mylib.WHITEPAWN
 		}
 		c.SetSquare(i, *tmp)
 
@@ -952,38 +781,33 @@ func (c *ChessBoard) Empty() {
 	c.Len = 0
 }
 
-func (cp *CapturedPieces) Empty() {
-	cp.Pieces = nil
-	cp.Len = 0
-}
-
 func (c *ChessBoard) initialize() {
 	fmt.Println(game.Name)
 
-	c.CurrentSquare = EMPTY
-	c.NextSquare = EMPTY
-	c.Turn = WHITE
+	c.CurrentSquare = mylib.EMPTY
+	c.NextSquare = mylib.EMPTY
+	c.Turn = mylib.WHITE
 	row := 0
 	for i := 0; i < 64; i++ {
-		s := new(Square)
+		s := new(mylib.Square)
 		if (i % 8) == 0 {
 			row++
 		}
 		if row%2 == 0 && i%2 == 0 {
-			s.Color = COLOR_WHITE
+			s.Color = mylib.COLOR_WHITE
 		} else if row%2 == 0 && i%2 == 1 {
-			s.Color = COLOR_BLACK
+			s.Color = mylib.COLOR_BLACK
 		} else if row%2 == 1 && i%2 == 0 {
-			s.Color = COLOR_BLACK
+			s.Color = mylib.COLOR_BLACK
 		} else {
-			s.Color = COLOR_WHITE
+			s.Color = mylib.COLOR_WHITE
 		}
 
 		s.Index = i
 		s.Type = "EMPTY"
 		s.Image = ""
 		s.Empty = true
-		s.TeamPiece = EMPTY
+		s.TeamPiece = mylib.EMPTY
 		s.FromOtherBoard = false
 		s.OrigPosition = true
 		c.Add(*s)
