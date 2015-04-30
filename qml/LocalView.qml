@@ -30,7 +30,7 @@ Rectangle {
 
 	// Add a button for when the game ends
 	Button {
-		x: 100
+		x: 230
 		y: 450
 		width: 110
 		height: 30
@@ -49,6 +49,7 @@ Rectangle {
 		y: 450
 		width: 110
 		height: 30
+		visible: game.inGame
 		id: resetSelection
 		text: "Reset Selection"
 		onClicked: {

@@ -124,6 +124,7 @@ func (g *Game) StartRoom(host int, boardNum int) {
 		fmt.Println("Not in a room")
 	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
 		fmt.Println("Not the room owner")
+		delete(rooms, my_room)
 		messenger.Msnger.Leave_global()
 		messenger.Msnger.Join_local(room_members)
 		StartGame(my_room, my_name, boardNum, game_color, game_team)
@@ -152,6 +153,7 @@ func (c *ChessBoard) Timer() {
 	} else if game.InGame {
 		temp := fmt.Sprintf("%v:%v:%v", game.Board, game.TeamPlayer, "Time")
 		messenger.Msnger.Send_message(temp, mylib.GAMEOVER)
+		EndGame(game.Board, game.TeamPlayer, "Time")
 	}
 }
 
@@ -411,6 +413,7 @@ func (c *ChessBoard) MovePiece(origLoc int, newLoc int) {
 				if captured.Type == "King" {
 					temp := fmt.Sprintf("%v:%v:%v", game.Board, game.TeamPlayer, "King")
 					messenger.Msnger.Send_message(temp, mylib.GAMEOVER)
+					EndGame(game.Board, game.TeamPlayer, "King")
 				}
 			}
 		} else {
@@ -562,6 +565,11 @@ func (c *ChessBoard) reinitialize() {
 func (c *ChessBoard) Empty() {
 	c.Board = nil
 	c.Len = 0
+}
+
+func (cp *CapturedPieces) Empty() {
+	cp.Pieces = nil
+	cp.Len = 0
 }
 
 func (c *ChessBoard) initialize() {

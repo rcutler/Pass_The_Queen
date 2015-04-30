@@ -11,6 +11,8 @@ Rectangle {
 
 	property bool butt: false	
 
+	color: "#d7d6d5"
+
 	GlobalChatWin{
 		x:370
 		y:100

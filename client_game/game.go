@@ -53,16 +53,25 @@ func StartGame(room string, player string, board int, color int, team int) {
 	qml.Changed(game, &game.InGame)
 }
 
-func EndGame() {
+func EndGame(board int, team int, reason string) {
 	game.InGame = false
+	in_room = false
 	qml.Changed(game, &game.InGame)
 
 	chessBoard.Empty()
+	capturedPieces.Empty()
 	qml.Changed(chessBoard, &chessBoard.Len)
+	qml.Changed(capturedPieces, &capturedPieces.Len)
 	chessBoard.initialize()
 	qml.Changed(chessBoard, &chessBoard.Board)
 	qml.Changed(chessBoard, &chessBoard.Len)
 	fmt.Println(chessBoard.Len)
+
+	messenger.Msnger.Leave_local()
+	messenger.Msnger.Join_global()
+	chessBoard.Time = 420
+	qml.Changed(chessBoard, &chessBoard.Time)
+	fmt.Println(board, " ", team, " ", reason)
 }
 
 func Run() error {
@@ -389,7 +398,7 @@ func process_messages() {
 			team, _ := strconv.Atoi(decoded[1])
 			cause := decoded[2]
 			fmt.Println(board_num, " ", team, " ", cause)
-			EndGame()
+			EndGame(board_num, team, cause)
 			if cause == "King" {
 				// The king was captured
 			} else {
