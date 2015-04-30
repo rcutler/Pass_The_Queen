@@ -7,14 +7,15 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"strconv"
+	//	"strconv"
 	"strings"
 )
 
 /* Messenger object used to communicate with other nodes in the local or global chat */
 type Messenger struct {
 	name           string                  //Name of this node
-	Port           int                     //Port number of this node
+	Port           int                     //Port of this node
+	Address        string                  //Address of this node
 	Is_supernode   bool                    //Whether this node is a supernode
 	supernode      string                  //Name of this node's supernode
 	encoders       map[string]*gob.Encoder //List of encoders
@@ -71,6 +72,34 @@ func (m *Messenger) Login() {
 		}
 	}
 
+	ip := ""
+	//Get IP address
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		fmt.Println("Error while searching ip address")
+		return
+	}
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			fmt.Println("Error while searching ip address")
+			return
+		}
+		if ip != "" {
+			break
+		}
+		for _, addr := range addrs {
+			ip = addr.String()
+			ip = strings.Split(ip, "/")[0]
+			if len(ip) > 6 && strings.Split(ip, ".")[0] != "127" {
+				break
+			}
+			ip = ""
+		}
+	}
+
+	m.Address = fmt.Sprintf("%v:%v", ip, m.Port)
+
 	m.Join_global()
 
 }
@@ -88,15 +117,15 @@ func (m *Messenger) serverSocket(ln net.Listener) {
 }
 
 /* Connection to this node's supernode(s) */
-func (m *Messenger) clientSocket(name string, port int, conn_type int) {
-	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%v", port))
+func (m *Messenger) clientSocket(name string, address string, conn_type int) {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%v", address))
 	defer conn.Close()
 	if err != nil {
-		fmt.Printf("Failed to connect to %v on port %v\n", name, port)
+		fmt.Printf("Failed to connect to %v on address %v\n", name, address)
 		log.Fatal("", err)
 		return
 	}
-	fmt.Printf("Connected to %v on port %v\n", name, port)
+	fmt.Printf("Connected to %v on address %v\n", name, address)
 
 	m.encoders[name] = gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
@@ -161,7 +190,7 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 		dec.Decode(&msg)
 		content := msg.Content
 
-		//fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
+		fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
 
 		if msg.Type != mylib.NONE {
 
@@ -234,9 +263,9 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 /* Send a message to the network */
 func (m *Messenger) Send_message(content string, Type int) {
 	m.received = append(m.received, &mylib.Message{content, m.name, m.name, "", m.Is_supernode, Type, m.v_clock.CurTime()})
-	//fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
+	fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
 	for dest, cur_enc := range m.encoders {
-		//fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+		fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
 		cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
 	}
 	m.v_clock.Update(nil)
@@ -245,7 +274,7 @@ func (m *Messenger) Send_message(content string, Type int) {
 /* Receive a message from the network */
 func (m *Messenger) Receive_message() *mylib.Message {
 	if len(m.deliver_buffer) != 0 {
-		//fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
+		fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
 		msg := m.deliver_buffer[0]
 		m.deliver_buffer = m.deliver_buffer[1:]
 		return msg
@@ -327,7 +356,7 @@ func (m *Messenger) Leave_local() {
 func (m *Messenger) Join_global() {
 
 	//Get list of nodes to connect to
-	m.enc.Encode(&mylib.Message{fmt.Sprintf("%v:%v", m.name, m.Port), m.name, m.name, "server", false, mylib.REQUEST_CONN_LIST, m.v_clock.CurTime()})
+	m.enc.Encode(&mylib.Message{fmt.Sprintf("%v:%v", m.name, m.Address), m.name, m.name, "server", false, mylib.REQUEST_CONN_LIST, m.v_clock.CurTime()})
 	m.received = nil
 	var msg mylib.Message
 	m.dec.Decode(&msg)
@@ -338,7 +367,7 @@ func (m *Messenger) Join_global() {
 		m.supernode = decoded_message[1]
 		fmt.Printf("Supernode name: %v\n", decoded_message[1])
 	} else {
-		m.supernode = fmt.Sprintf("%v:%v", m.name, m.Port)
+		m.supernode = fmt.Sprintf("%v:%v", m.name, m.Address)
 	}
 
 	//Print list of nodes to connect to
@@ -350,8 +379,8 @@ func (m *Messenger) Join_global() {
 	//Connect to list of nodes to connect to
 	for i := 1; i < len(decoded_message); i++ {
 		cur_node := strings.Split(decoded_message[i], ":")
-		cur_port, _ := strconv.Atoi(cur_node[1])
-		go m.clientSocket(cur_node[0], cur_port, mylib.GLOBAL_INTRODUCTION)
+		cur_address := fmt.Sprintf("%v:%v", cur_node[1], cur_node[2])
+		go m.clientSocket(cur_node[0], cur_address, mylib.GLOBAL_INTRODUCTION)
 	}
 }
 
@@ -368,7 +397,7 @@ func (m *Messenger) Join_local(members []string) {
 	//Connect to list of nodes to connect to
 	for i := range members {
 		cur_node := strings.Split(members[i], ":")
-		cur_port, _ := strconv.Atoi(cur_node[1])
-		go m.clientSocket(cur_node[0], cur_port, mylib.LOCAL_INTRODUCTION)
+		cur_address := fmt.Sprintf("%v:%v", cur_node[1], cur_node[2])
+		go m.clientSocket(cur_node[0], cur_address, mylib.LOCAL_INTRODUCTION)
 	}
 }

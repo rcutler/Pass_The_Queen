@@ -178,10 +178,10 @@ func start_network(engine1 *qml.Engine) {
 			if !in_room {
 				fmt.Println("Not in a room")
 			} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-				fmt.Println("Not the room owner")
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_local(room_members)
-				StartGame(my_room, my_name, game.Board, game_color, game_team)
+				//fmt.Println("Not the room owner")
+				//messenger.Msnger.Leave_global()
+				//messenger.Msnger.Join_local(room_members)
+				//StartGame(my_room, my_name, game.Board, game_color, game_team)
 			} else {
 				in_game = true
 				messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
@@ -318,11 +318,11 @@ func process_messages() {
 
 		} else if msg.Type == mylib.CREATE_ROOM {
 			decoded := strings.Split(content, ":")
-			rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
+			rooms[decoded[0]] = fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3])
 		} else if msg.Type == mylib.JOIN_ROOM {
 			decoded := strings.Split(content, ":")
 			if my_room == decoded[0] {
-				room_members = append(room_members, fmt.Sprintf("%v:%v", decoded[1], decoded[2]))
+				room_members = append(room_members, fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3]))
 			}
 		} else if msg.Type == mylib.START_GAME {
 			decoded := strings.Split(content, ":")
@@ -331,6 +331,7 @@ func process_messages() {
 				in_game = true
 				messenger.Msnger.Leave_global()
 				messenger.Msnger.Join_local(room_members)
+				StartGame(my_room, my_name, game.Board, game_color, game_team)
 				//start_game_guest()
 			}
 		} else if msg.Type == mylib.DELETE_ROOM {
@@ -346,7 +347,7 @@ func process_messages() {
 			decoded := strings.Split(content, ":")
 			if my_room == decoded[0] {
 				for i := range room_members {
-					if room_members[i] == fmt.Sprintf("%v:%v", decoded[1], decoded[2]) {
+					if room_members[i] == fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3]) {
 						room_members = append(room_members[:i], room_members[i+1:]...)
 						break
 					}

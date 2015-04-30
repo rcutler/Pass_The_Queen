@@ -69,7 +69,7 @@ func (g *Game) JoinRoom(room_name string) {
 		} else {
 			game_color = 2
 			game_team = 2
-			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.JOIN_ROOM)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Address), mylib.JOIN_ROOM)
 			in_room = true
 			my_room = room_name
 		}
@@ -83,12 +83,12 @@ func (g *Game) LeaveRoom() {
 		messenger.Msnger.Join_global()
 	} else if in_room {
 		//Delete room if room owner
-		if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
+		if rooms[my_room] == fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Address) {
 			messenger.Msnger.Send_game_server(my_room, mylib.DELETE_ROOM)
-			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.DELETE_ROOM)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Address), mylib.DELETE_ROOM)
 			delete(rooms, my_room)
 		} else {
-			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.LEAVE_ROOM)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Address), mylib.LEAVE_ROOM)
 		}
 		in_room = false
 		my_room = ""
@@ -105,12 +105,12 @@ func (g *Game) CreateRoom(room_name string) {
 		fmt.Println("DEBUG: room_name = ", room_name)
 		game_color = 1
 		game_team = 1
-		messenger.Msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
+		messenger.Msnger.Send_game_server(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Address), mylib.CREATE_ROOM)
 		msg := messenger.Msnger.Receive_game_server()
 		if msg.Type == mylib.ACK {
 			fmt.Printf("Creating room: %v\n", room_name)
-			rooms[room_name] = fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port)
-			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Port), mylib.CREATE_ROOM)
+			rooms[room_name] = fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Address)
+			messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", room_name, my_name, messenger.Msnger.Address), mylib.CREATE_ROOM)
 			in_room = true
 			my_room = room_name
 		} else {
@@ -122,15 +122,15 @@ func (g *Game) CreateRoom(room_name string) {
 func (g *Game) StartRoom(host int, boardNum int) {
 	if !in_room {
 		fmt.Println("Not in a room")
-	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
-		fmt.Println("Not the room owner")
-		messenger.Msnger.Leave_global()
-		messenger.Msnger.Join_local(room_members)
-		StartGame(my_room, my_name, boardNum, game_color, game_team)
+	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Address) {
+		fmt.Println("Button: Not the room owner")
+		//messenger.Msnger.Leave_global()
+		//messenger.Msnger.Join_local(room_members)
+		//StartGame(my_room, my_name, boardNum, game_color, game_team)
 	} else {
 		//if host == 1 {
 		messenger.Msnger.Send_game_server(my_room, mylib.START_GAME)
-		messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Port), mylib.START_GAME)
+		messenger.Msnger.Send_message(fmt.Sprintf("%v:%v:%v", my_room, my_name, messenger.Msnger.Address), mylib.START_GAME)
 		delete(rooms, my_room)
 		messenger.Msnger.Leave_global()
 		messenger.Msnger.Join_local(room_members)

@@ -79,7 +79,7 @@ func serverSocketConnection(conn net.Conn) {
 				}
 				supernodes[msg.Content] = 0
 			}
-			enc.Encode(&mylib.Message{reply, "server", "server", strings.Split(msg.Content, ":")[1], false, mylib.REQUEST_CONN_LIST, nil})
+			enc.Encode(&mylib.Message{reply, "server", "server", strings.Split(msg.Content, ":")[0], false, mylib.REQUEST_CONN_LIST, nil})
 		} else if msg.Type == mylib.CREATE_ROOM {
 			name_available := true
 			decoded := strings.Split(msg.Content, ":")
@@ -90,7 +90,7 @@ func serverSocketConnection(conn net.Conn) {
 			}
 			if name_available {
 				enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.ACK, nil})
-				rooms[decoded[0]] = fmt.Sprintf("%v:%v", decoded[1], decoded[2])
+				rooms[decoded[0]] = fmt.Sprintf("%v:%v:%v", decoded[1], decoded[2], decoded[3])
 			} else {
 				enc.Encode(&mylib.Message{"", "server", "server", msg.Source, false, mylib.NAK, nil})
 			}
