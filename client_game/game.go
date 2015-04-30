@@ -338,8 +338,8 @@ func process_messages() {
 			delete(rooms, decoded[0])
 			if my_room == decoded[0] {
 				in_game = true
-				messenger.Msnger.Leave_global()
-				messenger.Msnger.Join_local(room_members)
+				//messenger.Msnger.Leave_global()
+				//messenger.Msnger.Join_local(room_members)
 				//StartGame(my_room, my_name, game.Board, game_color, game_team)
 				//start_game_guest()
 			}

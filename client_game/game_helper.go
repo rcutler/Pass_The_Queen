@@ -122,7 +122,7 @@ func (g *Game) CreateRoom(room_name string) {
 func (g *Game) StartRoom(host int, boardNum int) {
 	if !in_room {
 		fmt.Println("Not in a room")
-	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Port) {
+	} else if rooms[my_room] != fmt.Sprintf("%v:%v", my_name, messenger.Msnger.Address) {
 		fmt.Println("Not the room owner")
 		delete(rooms, my_room)
 		messenger.Msnger.Leave_global()

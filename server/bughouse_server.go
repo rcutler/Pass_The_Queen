@@ -54,6 +54,7 @@ func serverSocketConnection(conn net.Conn) {
 		var msg mylib.Message
 		dec.Decode(&msg)
 		lock.Lock()
+		//fmt.Println(msg)
 		if msg.Type == mylib.REQUEST_CONN_LIST {
 			fmt.Printf("Accepted connection from: %v\n", msg.Content)
 			min_count := len(supernodes)

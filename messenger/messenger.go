@@ -13,20 +13,22 @@ import (
 
 /* Messenger object used to communicate with other nodes in the local or global chat */
 type Messenger struct {
-	name           string                  //Name of this node
-	Port           int                     //Port of this node
-	Address        string                  //Address of this node
-	Is_supernode   bool                    //Whether this node is a supernode
-	supernode      string                  //Name of this node's supernode
-	encoders       map[string]*gob.Encoder //List of encoders
-	local_conns    []*net.Conn             //Array of local network connections
-	global_conns   []*net.Conn             //Array of global network connections
-	enc            *gob.Encoder            //Game Server encoder
-	dec            *gob.Decoder            //Game Server decoder
-	rcv_buffer     []*mylib.Message        //received message buffer (before ordering)
-	deliver_buffer []*mylib.Message        //messages ready to for delivery (after ordering)
-	v_clock        mylib.VectorClock       //Vector Clock
-	received       []*mylib.Message        //All received messages
+	name            string                  //Name of this node
+	Port            int                     //Port of this node
+	Address         string                  //Address of this node
+	Is_supernode    bool                    //Whether this node is a supernode
+	supernode       string                  //Name of this node's supernode
+	local_encoders  map[string]*gob.Encoder //List of local encoders
+	global_encoders map[string]*gob.Encoder //List of global encoders
+	local_conns     []*net.Conn             //Array of local network connections
+	global_conns    []*net.Conn             //Array of global network connections
+	enc             *gob.Encoder            //Game Server encoder
+	dec             *gob.Decoder            //Game Server decoder
+	rcv_buffer      []*mylib.Message        //received message buffer (before ordering)
+	deliver_buffer  []*mylib.Message        //messages ready to for delivery (after ordering)
+	v_clock         mylib.VectorClock       //Vector Clock
+	received        []*mylib.Message        //All received messages
+	in_global       bool
 }
 
 var Msnger Messenger
@@ -36,7 +38,9 @@ func NewMessenger(name string) Messenger {
 	var m Messenger
 	m.name = name
 	m.Is_supernode = false
-	m.encoders = make(map[string]*gob.Encoder)
+	m.in_global = true
+	m.local_encoders = make(map[string]*gob.Encoder)
+	m.global_encoders = make(map[string]*gob.Encoder)
 	m.v_clock = mylib.NewVectorClock(name)
 	return m
 }
@@ -48,8 +52,8 @@ func (m *Messenger) Login() {
 	fmt.Println("contacting team4.ece842.com")
 
 	//Connect to server
-	//conn, err := net.Dial("tcp", "localhost:8080")
-	conn, err := net.Dial("tcp", "52.11.139.181:8080")
+	conn, err := net.Dial("tcp", "localhost:8080")
+	//conn, err := net.Dial("tcp", "52.11.139.181:8080")
 
 	if err != nil {
 		fmt.Println("Failed to connect to server on Port 8080")
@@ -127,16 +131,19 @@ func (m *Messenger) clientSocket(name string, address string, conn_type int) {
 	}
 	fmt.Printf("Connected to %v on address %v\n", name, address)
 
-	m.encoders[name] = gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
 	if conn_type == mylib.GLOBAL_INTRODUCTION {
 		m.global_conns = append(m.global_conns, &conn)
+		m.global_encoders[name] = gob.NewEncoder(conn)
+		m.global_encoders[name].Encode(&mylib.Message{"", m.name, m.name, name, m.Is_supernode, conn_type, m.v_clock.CurTime()})
+		defer delete(m.global_encoders, name)
 	} else {
 		m.local_conns = append(m.local_conns, &conn)
+		m.local_encoders[name] = gob.NewEncoder(conn)
+		m.local_encoders[name].Encode(&mylib.Message{"", m.name, m.name, name, m.Is_supernode, conn_type, m.v_clock.CurTime()})
+		defer delete(m.local_encoders, name)
 	}
 	//Introduce this node
-	m.encoders[name].Encode(&mylib.Message{"", m.name, m.name, name, m.Is_supernode, conn_type, m.v_clock.CurTime()})
-	defer delete(m.encoders, name)
 
 	m.receive_messages(name, dec)
 }
@@ -152,13 +159,16 @@ func (m *Messenger) serverSocketConnection(conn net.Conn) {
 	dec.Decode(&msg)
 	name := msg.Source
 	if msg.Type == mylib.GLOBAL_INTRODUCTION {
+		fmt.Println("accepted global network connection")
 		m.global_conns = append(m.global_conns, &conn)
+		m.global_encoders[name] = gob.NewEncoder(conn)
+		defer delete(m.global_encoders, name)
 	} else {
+		fmt.Println("accepted local network connection")
 		m.local_conns = append(m.local_conns, &conn)
+		m.local_encoders[name] = gob.NewEncoder(conn)
+		defer delete(m.local_encoders, name)
 	}
-
-	m.encoders[name] = gob.NewEncoder(conn)
-	defer delete(m.encoders, name)
 
 	//Remove new connection's previous history from vector clock and received array
 	m.v_clock.Remove(name)
@@ -190,7 +200,7 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 		dec.Decode(&msg)
 		content := msg.Content
 
-		fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
+		//	fmt.Printf("Received: %q at %q\n", msg, m.v_clock.CurTime())
 
 		if msg.Type != mylib.NONE {
 
@@ -225,10 +235,18 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 				//if msg.Type == mylib.CHAT_MESSAGE {
 				//	content = fmt.Sprintf("%v says: %v", msg.Source, content)
 				//}
+
 				if msg.Orig_source != m.name {
-					for dest, cur_enc := range m.encoders {
-						//fmt.Printf("Forwarded: %q\n", mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
-						cur_enc.Encode(&mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
+					if m.in_global {
+						for dest, cur_enc := range m.global_encoders {
+							//fmt.Printf("Forwarded: %q\n", mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
+							cur_enc.Encode(&mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
+						}
+					} else {
+						for dest, cur_enc := range m.local_encoders {
+							//fmt.Printf("Forwarded: %q\n", mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
+							cur_enc.Encode(&mylib.Message{content, msg.Orig_source, m.name, dest, m.Is_supernode, msg.Type, msg.Timestamp})
+						}
 					}
 				}
 
@@ -263,10 +281,18 @@ func (m *Messenger) receive_messages(name string, dec *gob.Decoder) {
 /* Send a message to the network */
 func (m *Messenger) Send_message(content string, Type int) {
 	m.received = append(m.received, &mylib.Message{content, m.name, m.name, "", m.Is_supernode, Type, m.v_clock.CurTime()})
-	fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
-	for dest, cur_enc := range m.encoders {
-		fmt.Printf("Sent: %q\n", mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
-		cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+	//fmt.Printf("%q Sending: %q\n", m.v_clock.CurTime(), content)
+	if m.in_global {
+		for dest, cur_enc := range m.global_encoders {
+			//		fmt.Printf("Sent globally: %q\n", mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+			cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+		}
+	} else {
+		for dest, cur_enc := range m.local_encoders {
+			//		fmt.Printf("Sent locally: %q\n", mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+			cur_enc.Encode(&mylib.Message{content, m.name, m.name, dest, m.Is_supernode, Type, m.v_clock.CurTime()})
+		}
+
 	}
 	m.v_clock.Update(nil)
 }
@@ -274,7 +300,7 @@ func (m *Messenger) Send_message(content string, Type int) {
 /* Receive a message from the network */
 func (m *Messenger) Receive_message() *mylib.Message {
 	if len(m.deliver_buffer) != 0 {
-		fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
+		//	fmt.Printf("Receiving: %q\n", m.deliver_buffer[0])
 		msg := m.deliver_buffer[0]
 		m.deliver_buffer = m.deliver_buffer[1:]
 		return msg
@@ -340,6 +366,7 @@ func (m *Messenger) Leave_global() {
 		(*m.global_conns[i]).Close()
 	}
 	m.global_conns = nil
+	m.in_global = false
 
 }
 
@@ -354,6 +381,8 @@ func (m *Messenger) Leave_local() {
 
 /* Join global chat */
 func (m *Messenger) Join_global() {
+
+	m.in_global = true
 
 	//Get list of nodes to connect to
 	m.enc.Encode(&mylib.Message{fmt.Sprintf("%v:%v", m.name, m.Address), m.name, m.name, "server", false, mylib.REQUEST_CONN_LIST, m.v_clock.CurTime()})
